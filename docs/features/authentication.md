@@ -1,6 +1,6 @@
 # Authentication
 
-**Status:** Draft — implementation has not started.
+**Status:** Implemented and verified in the local Docker stack.
 
 ## Purpose and Terminology
 
@@ -66,7 +66,7 @@ Required access-token claims:
 | `exp` | Expiration | Expired tokens receive `401`. |
 | `nbf` | Not valid before | Premature tokens receive `401`. |
 | `email` | Account email | Copied to the local account when present. |
-| `email_verified` | Verification state | The first version should reject unverified accounts when email is required. |
+| `email_verified` | Verification state | Stored locally; the initial local realm permits unverified email until SMTP is configured. |
 | `preferred_username` | Keycloak-facing username | May seed a profile but does not replace OwlNest username rules. |
 
 The backend must not trust a claim merely because it exists; signature, issuer, audience, and time validation happen first.
@@ -113,13 +113,34 @@ Initial behavior:
 - valid token and existing account → `200 OK`;
 - valid token and first visit → create account/profile, then `200 OK`;
 - authenticated identity without required permission → `403 Forbidden`;
-- duplicate provisioning race → one account wins through the database unique constraint; the request reloads it.
+- duplicate provisioning race → the database unique constraint prevents duplicate identities; explicit retry handling can be added when concurrent first-login traffic becomes relevant.
 
 ## Configuration and Networking
 
-Implementation will add a Keycloak service and development realm import. One canonical issuer must be used in tokens and validation. The URL visible to Flutter may differ from the container-network URL used to download JWKs, so `issuer-uri` and `jwk-set-uri` may be configured separately while issuer validation remains strict.
+The development stack includes Keycloak with a versioned realm import. One canonical issuer is used in tokens and validation. The URL visible to Flutter differs from the container-network URL used to download JWKs, so `issuer-uri` and `jwk-set-uri` are configured separately while issuer validation remains strict.
 
 Do not finalize a `localhost` issuer until iOS simulator, Android emulator/device, local backend, and full Docker stack access paths are agreed. A mismatched issuer is an authentication failure even when the JWK endpoint is reachable.
+
+## Email Verification and SMTP
+
+**Current state:** no SMTP service is configured and the development realm keeps `verifyEmail: false`. Email/password login therefore works without sending email.
+
+**Planned development setup:** add Mailpit to Docker Compose and configure Keycloak to use it as the local SMTP server. Mailpit will capture verification and password-reset messages and expose them through its local web interface; it is not a production email provider.
+
+SMTP becomes required before enabling email verification or self-service password reset because Keycloak must deliver verification and reset links. Production will use a transactional email provider rather than Mailpit. Do not enable mandatory verification until mail delivery is configured and tested, or new users can be locked out.
+
+## Registration and Extended Profile Fields
+
+Keycloak can run self-registration and collect built-in `firstName` and `lastName` fields plus custom attributes defined through its User Profile configuration. Required rules, validation, and who may view or edit each attribute can be configured there.
+
+For OwlNest, keep the ownership boundary explicit:
+
+- Keycloak owns credentials and login identity: email, password, verification state, and optionally first/last name.
+- PostgreSQL owns product profile data: username, display name, bio, birth date, gender, avatar settings, and future social preferences.
+- Store `birthDate`, not mutable `age`; calculate age when needed.
+- Complete product-specific fields through an authenticated OwlNest onboarding endpoint after Keycloak registration.
+
+Custom Keycloak attributes can later be mapped into token claims and copied to PostgreSQL, but avoid placing sensitive or frequently changing profile data in access tokens. The first slice only seeds a local display name from standard name claims and creates the minimal profile.
 
 ## Security Defaults
 
@@ -140,6 +161,8 @@ Do not finalize a `localhost` issuer until iOS simulator, Android emulator/devic
 - controller integration test for first and repeated `/profile/me` calls;
 - one live Keycloak smoke test after local realm wiring is implemented;
 - Flutter end-to-end verification only after the backend contract is green.
+
+The implemented slice passes the Gradle test suite and a live local smoke flow: Keycloak user creation, email/password token request through the development Postman client, JWT-protected profile request, and first-visit PostgreSQL provisioning.
 
 ## Non-goals for the First Slice
 

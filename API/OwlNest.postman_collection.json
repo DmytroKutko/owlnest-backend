@@ -1,0 +1,293 @@
+{
+  "info": {
+    "_postman_id": "9740a8e4-6907-45c8-8c67-4a4fb9415ec0",
+    "name": "OwlNest Local API",
+    "description": "Local Keycloak and OwlNest Backend requests. Import and select the ignored OwlNest Local environment generated from .env. Flutter uses Authorization Code with PKCE.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "adminAccessToken",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const requirementsByRequest = {",
+          "  'Backend Health': ['baseUrl'],",
+          "  'Keycloak Discovery': ['keycloakUrl', 'realm'],",
+          "  'Get Admin Token': ['keycloakUrl', 'adminUsername', 'adminPassword'],",
+          "  'Create Test User': ['keycloakUrl', 'realm', 'adminAccessToken', 'email', 'password', 'firstName', 'lastName'],",
+          "  'Development Email-Password Login': ['keycloakUrl', 'realm', 'clientId', 'email', 'password'],",
+          "  'Refresh Access Token': ['keycloakUrl', 'realm', 'clientId', 'refreshToken'],",
+          "  'Get Current Profile': ['baseUrl', 'accessToken']",
+          "};",
+          "const required = requirementsByRequest[pm.info.requestName] || [];",
+          "const missing = required.filter((key) => {",
+          "  const value = pm.variables.get(key);",
+          "  return typeof value !== 'string' || value.trim().length === 0;",
+          "});",
+          "if (missing.length > 0) {",
+          "  throw new Error(`Missing Postman variables for ${pm.info.requestName}: ${missing.join(', ')}. Import and select API/OwlNest.local.postman_environment.json, then retry.`);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Infrastructure",
+      "item": [
+        {
+          "name": "Backend Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Keycloak Discovery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{keycloakUrl}}/realms/{{realm}}/.well-known/openid-configuration"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Development User Setup",
+      "description": "Development-only Keycloak Admin API helpers. Do not use these requests from Flutter.",
+      "item": [
+        {
+          "name": "Get Admin Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Admin token issued', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const response = pm.response.json();",
+                  "  pm.collectionVariables.set('adminAccessToken', response.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "admin-cli"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "username",
+                  "value": "{{adminUsername}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{adminPassword}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/master/protocol/openid-connect/token"
+          }
+        },
+        {
+          "name": "Create Test User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User created or already exists', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{email}}\",\n  \"email\": \"{{email}}\",\n  \"firstName\": \"{{firstName}}\",\n  \"lastName\": \"{{lastName}}\",\n  \"enabled\": true,\n  \"emailVerified\": false,\n  \"credentials\": [\n    {\n      \"type\": \"password\",\n      \"value\": \"{{password}}\",\n      \"temporary\": false\n    }\n  ]\n}"
+            },
+            "url": "{{keycloakUrl}}/admin/realms/{{realm}}/users"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Development Email-Password Login",
+          "description": "Development/Postman-only Direct Access Grant. Flutter uses Authorization Code with PKCE.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('User tokens issued', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const response = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', response.access_token);",
+                  "  pm.collectionVariables.set('refreshToken', response.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "username",
+                  "value": "{{email}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile email"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Access token refreshed', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const response = pm.response.json();",
+                  "  pm.collectionVariables.set('accessToken', response.access_token);",
+                  "  pm.collectionVariables.set('refreshToken', response.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refreshToken}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Current Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/profile/me"
+          }
+        }
+      ]
+    }
+  ]
+}

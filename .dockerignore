@@ -6,6 +6,7 @@ build
 docs
 .env
 .env.*
+API/*.postman_environment.json
 *.iml
 *.log
 logs

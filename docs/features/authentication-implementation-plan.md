@@ -1,6 +1,6 @@
 # Authentication Implementation Plan
 
-**Status:** Planned — no feature code has been created.
+**Status:** Implemented and verified in the local Docker stack.
 
 This blueprint describes how to implement the first authenticated OwlNest slice manually. File names may be refined during implementation, but boundaries and responsibilities should remain stable unless an ADR changes them.
 
@@ -8,7 +8,7 @@ This blueprint describes how to implement the first authenticated OwlNest slice 
 
 ### Stage 1: Keycloak Development Infrastructure
 
-Planned files and changes:
+Implemented files and changes:
 
 ```text
 compose.yaml                              # add Keycloak service and health/dependency wiring
@@ -20,7 +20,7 @@ docs/features/authentication.md           # keep runtime contract current
 
 Keycloak will run in development mode only. The realm import contains clients, roles, redirect URIs, and non-secret development configuration. Real credentials remain in `.env`.
 
-Before implementation, choose a canonical issuer reachable from the Flutter targets. The containerized backend may use an internal JWK URL while still validating the external `iss` value.
+The local canonical issuer is `http://localhost:8081/realms/owlnest`. The containerized backend uses the internal Keycloak JWK URL while still validating that external `iss` value. Device-reachable issuer configuration remains a separate deployment concern.
 
 ### Stage 2: JWT Boundary
 
@@ -34,10 +34,10 @@ src/main/java/dev/dkutko/owlnest/identity/
     └── SpringSecurityIdentityProvider.java # maps validated Jwt to AuthenticatedIdentity
 
 src/test/java/dev/dkutko/owlnest/identity/infrastructure/security/
-└── SecurityConfigurationTest.java
+└── SpringSecurityIdentityProviderTest.java
 ```
 
-`AuthenticatedIdentity` contains only values needed by application code: provider, subject, email, verification state, and selected authorities. The application layer does not depend on `Jwt`, `SecurityContextHolder`, or Keycloak-specific classes.
+`AuthenticatedIdentity` contains only values needed by application code: provider, subject, email, verification state, username, and standard name claims. The application layer does not depend on `Jwt`, `SecurityContextHolder`, or Keycloak-specific classes.
 
 `SecurityConfiguration` will provide a `SecurityFilterChain`: public health, authenticated `/api/v1/**`, stateless sessions, bearer JWT, and explicit `401/403` behavior. Do not add `@EnableMethodSecurity` until a use case actually needs method-level authorization.
 
@@ -74,6 +74,7 @@ src/main/java/dev/dkutko/owlnest/profile/
 │   ├── CurrentProfileController.java
 │   └── ProfileResponse.java
 ├── application/
+│   ├── CurrentProfile.java
 │   └── GetOrCreateCurrentProfileService.java
 ├── domain/
 │   ├── Profile.java
@@ -82,9 +83,8 @@ src/main/java/dev/dkutko/owlnest/profile/
     ├── SpringDataProfileRepository.java
     └── JpaProfileRepositoryAdapter.java
 
-src/test/java/dev/dkutko/owlnest/profile/
-├── api/CurrentProfileControllerTest.java
-└── application/GetOrCreateCurrentProfileServiceTest.java
+src/test/java/dev/dkutko/owlnest/
+└── CurrentProfileControllerIntegrationTests.java
 ```
 
 The controller reads no raw token and contains no provisioning logic. It calls the application service and maps the returned profile to a response DTO. JPA entities are never serialized directly.
@@ -157,4 +157,4 @@ For each stage:
 7. Run the local Keycloak smoke flow when applicable.
 8. Review the exact diff and architecture boundaries before committing.
 
-The next implementation turn should start with Stage 1 only; it should not create all planned files at once.
+Stages 1–4 are implemented. Stage 5 intentionally keeps Spring Security's standard `401` response until the Flutter client requires a stable JSON error contract.

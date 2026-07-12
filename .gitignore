@@ -9,6 +9,7 @@ build/
 .env
 .env.*
 !.env.example
+API/*.postman_environment.json
 secrets/
 *.key
 *.p12

@@ -7,3 +7,10 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          audiences: ${AUTH_AUDIENCE:owlnest-api}
+          issuer-uri: ${AUTH_ISSUER_URI:http://localhost:8081/realms/owlnest}
+          jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/realms/owlnest/protocol/openid-connect/certs}

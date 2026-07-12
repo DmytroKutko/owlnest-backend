@@ -10,8 +10,8 @@ This is a Java 21 Spring Boot modular monolith. Keep one Gradle application init
 - `./gradlew test` runs JUnit 5 tests through Testcontainers.
 - `./gradlew build` compiles the project, runs tests, and creates the application artifact under `build/libs`.
 - `./gradlew clean` removes generated build output.
-- `docker compose up -d` starts PostgreSQL manually; use `docker compose down` when finished.
-- `docker compose --profile full-stack up --build` runs the backend and PostgreSQL as containers.
+- `docker compose up -d` starts PostgreSQL and Keycloak manually; use `docker compose down` when finished.
+- `./setup.sh` stops, rebuilds, and starts the complete backend, PostgreSQL, and Keycloak stack.
 
 Before the first run, copy `.env.example` to `.env`. Docker must be running for development and integration tests. Use the checked-in wrapper instead of system Gradle.
 
@@ -25,11 +25,11 @@ Use JUnit 5 and Spring Boot's focused test support where possible; reserve `@Spr
 
 ## Commit & Pull Request Guidelines
 
-Git history is unavailable, so no established pattern can be confirmed. Use focused commits with imperative subjects such as `Add user profile endpoint`. Pull requests must explain the change and verification, link issues, and call out migrations, configuration, or API contract changes. Include request/response examples for endpoints.
+Recent history uses focused imperative subjects such as `Configure Docker and PostgreSQL development stack`. Keep one concern per commit. Pull requests must explain the change and verification, link issues, and call out migrations, configuration, or API contract changes. Include request/response examples for endpoints.
 
 ## Security & Configuration
 
-Never commit credentials or `.env`. Keep safe placeholders in `.env.example` and supply secrets through environment variables or an external secret manager. Pin `postgres:latest` before production use.
+Never commit credentials, `.env`, or generated Postman environments. Keep safe placeholders in `.env.example` and supply secrets through environment variables or an external secret manager.
 
 ## Agent-Specific Collaboration
 
