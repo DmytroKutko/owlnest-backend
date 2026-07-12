@@ -33,4 +33,4 @@ Never commit credentials or `.env`. Keep safe placeholders in `.env.example` and
 
 ## Agent-Specific Collaboration
 
-Read `docs/project-context.md` before non-trivial work. Work in small vertical slices, explain choices and meaningful alternatives, and avoid premature infrastructure. For each new Spring or Jakarta annotation, explain its purpose, processor, lifecycle timing, scope, and pitfalls. Document significant architectural decisions before implementation.
+Read `docs/project-context.md` before non-trivial work. Work in small vertical slices, explain choices and alternatives, and avoid premature infrastructure. Before implementation, document the file plan, dependency use, tradeoffs, annotations, and verification. For each new Spring or Jakarta annotation, explain its purpose, processor, lifecycle timing, scope, and pitfalls.

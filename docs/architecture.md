@@ -54,7 +54,9 @@ PostgreSQL is the source of truth, including messages. WebSocket is a live-deliv
 
 ## Security Direction
 
-Prefer a dedicated identity provider for registration, credentials, email verification, password recovery, and token issuance. This application then acts as an OAuth2 Resource Server that validates JWTs and owns a local profile keyed by the token subject (`sub`). This matches the dependency already present and avoids implementing security-sensitive token flows inside business code. The provider choice requires an ADR before the first auth slice; Keycloak and Firebase Authentication are candidates. Firebase Authentication is not required to use FCM.
+Use Keycloak as the dedicated identity provider for registration, credentials, email verification, password recovery, and token issuance. OwlNest Backend acts only as an OAuth2 Resource Server: it validates JWT access tokens and maps the external token subject (`sub`) to a local account UUID. Business tables reference the local UUID, not the Keycloak subject.
+
+Login, logout, refresh, and registration remain between Flutter and Keycloak. The backend owns authorization rules, local account provisioning, and product profile data. This decision is recorded in [ADR-0002](decisions/0002-use-keycloak-as-identity-provider.md); the contract and implementation blueprint live in [Authentication](features/authentication.md) and [Authentication Implementation Plan](features/authentication-implementation-plan.md).
 
 ## Module Interaction
 

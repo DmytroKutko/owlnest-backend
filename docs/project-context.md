@@ -33,3 +33,4 @@ The primary contributor is learning Spring Boot and backend development after 7+
    - where it should and should not be used;
    - important pitfalls and testing implications.
 5. Keep documentation synchronized with implementation and clearly label unapproved proposals.
+6. Before implementing a feature, document the planned files, dependency use, alternatives, tradeoffs, new annotations, and verification strategy so the work can be reproduced manually.

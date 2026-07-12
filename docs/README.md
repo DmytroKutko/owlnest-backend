@@ -40,7 +40,11 @@ The backend JVM and tests use UTC regardless of the developer machine timezone. 
 - [Project Context](project-context.md) — product vision and collaboration rules.
 - [Architecture](architecture.md) — proposed modular architecture and delivery roadmap. Status: **Draft**.
 - [Annotation Glossary](annotations.md) — annotations currently present in the codebase.
+- [Development Workflow](development-workflow.md) — required planning and explanation sequence for each feature.
+- [Authentication](features/authentication.md) — authentication contract and security boundaries. Status: **Draft**.
+- [Authentication Implementation Plan](features/authentication-implementation-plan.md) — planned files, dependencies, annotations, stages, and alternatives.
 - [ADR-0001](decisions/0001-feature-first-modular-monolith.md) — accepted feature-first modular-monolith structure.
+- [ADR-0002](decisions/0002-use-keycloak-as-identity-provider.md) — accepted Keycloak identity-provider decision.
 
 ## Documentation Conventions
 
