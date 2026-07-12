@@ -14,3 +14,20 @@ spring:
           audiences: ${AUTH_AUDIENCE:owlnest-api}
           issuer-uri: ${AUTH_ISSUER_URI:http://localhost:8081/realms/owlnest}
           jwk-set-uri: ${AUTH_JWK_SET_URI:http://localhost:8081/realms/owlnest/protocol/openid-connect/certs}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    disable-swagger-default-url: true
+    doc-expansion: none
+    operations-sorter: method
+    tags-sorter: alpha
+    urls-primary-name: REST API
+    oauth:
+      client-id: owlnest-swagger
+      app-name: OwlNest Swagger UI
+      scopes:
+        - openid
+        - profile
+        - email
+      use-pkce-with-authorization-code-grant: true

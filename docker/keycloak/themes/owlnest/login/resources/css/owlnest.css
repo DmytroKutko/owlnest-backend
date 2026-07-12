@@ -172,6 +172,21 @@ a:focus,
     color: var(--owlnest-muted);
 }
 
+@media (max-height: 62.5rem) {
+    .pf-v5-c-login {
+        padding-block: 0;
+    }
+
+    .pf-v5-c-login__container {
+        row-gap: 0.5rem;
+        padding-block: 0.75rem;
+    }
+
+    .pf-v5-c-login__header {
+        margin-top: 0;
+    }
+}
+
 @media (max-width: 37.5rem) {
     .pf-v5-c-login__container {
         grid-template-columns: minmax(0, 1fr);

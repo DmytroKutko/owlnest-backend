@@ -8,6 +8,8 @@ Generate the ignored local Postman environment from `.env`:
 
 Import both `OwlNest.postman_collection.json` and the generated `OwlNest.local.postman_environment.json`, then select **OwlNest Local** in Postman. `./setup.sh` also regenerates the environment automatically when `jq` is installed.
 
+Interactive REST documentation is available at `http://localhost:8080/swagger-ui.html`. Swagger **Authorize** can sign in through the dedicated `owlnest-swagger` Keycloak client using Authorization Code + PKCE, or accept an access token obtained through Postman.
+
 The generated environment contains local credentials. It is ignored by Git and created with owner-only permissions; do not share or commit it.
 
 The collection can create a local Keycloak user and obtain tokens without opening a browser. This uses Keycloak Admin REST API plus Direct Access Grant and is intended only for local development. The real Flutter client will use the browser-based Authorization Code flow with PKCE.

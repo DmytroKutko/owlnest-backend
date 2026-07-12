@@ -135,6 +135,8 @@ Keycloak can run self-registration and collect built-in `firstName` and `lastNam
 
 The application's login page is the Keycloak authorization page for `owlnest-flutter`, not the Admin Console or Account Console. Flutter opens that page through Authorization Code + PKCE; the normal login form exposes a Register link, while `prompt=create` opens registration directly.
 
+Swagger UI uses a separate public client named `owlnest-swagger`, restricted to `http://localhost:8080/swagger-ui/oauth2-redirect.html` and PKCE S256. This lets API documentation perform the same browser-based login without reusing Flutter/Postman redirect URIs or storing a client secret. Login and refresh remain Keycloak token-protocol operations rather than OwlNest REST controllers.
+
 For local browser convenience, the custom Keycloak welcome theme redirects `http://localhost:8081` to the OwlNest Account Console. The Account Console then starts its own secure authorization flow, so developers can enter through the short root URL without hard-coding an authentication-session URL. The Admin Console remains available at `http://localhost:8081/admin/`.
 
 The `owlnest` login theme inherits Keycloak's maintained `keycloak.v2` templates and overrides only CSS and brand assets. Sign in, registration, password recovery, and related authentication pages therefore share the warm OwlNest visual language without copying security-sensitive form templates into the repository.

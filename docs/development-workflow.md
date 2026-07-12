@@ -26,7 +26,13 @@ For every new Spring or Jakarta annotation, explain its purpose, processor, star
 
 Treat architecture proposals as Draft until accepted. After agreement, implement one vertical slice at a time. Do not scaffold empty future modules or speculative abstractions.
 
-## 7. Verify and Review
+## 7. Maintain API Documentation
+
+For every added, changed, or removed REST endpoint, update OpenAPI annotations, request/response schemas, integration tests, the Postman collection, and the owning feature document in the same change. Verify the generated `/v3/api-docs/rest` contract rather than treating annotations as untested comments.
+
+Keep the Swagger UI groups `REST API` and `WebSocket API (planned)`. WebSocket channels and messages belong in an AsyncAPI document once that feature starts; Swagger may link to that contract but must not invent REST operations for socket messages.
+
+## 8. Verify and Review
 
 Review all changed files and module boundaries. Run formatting, static analysis, focused tests, integration tests, and proportionate runtime smoke checks. Report remaining risks before committing.
 
@@ -38,4 +44,5 @@ Each feature should have:
 - an implementation blueprint when the change is non-trivial;
 - an ADR in `docs/decisions/` for significant or difficult-to-reverse choices;
 - updated annotation documentation as implementation introduces annotations;
+- synchronized OpenAPI/Postman contracts for REST changes and AsyncAPI contracts for future WebSocket changes;
 - a short verified completion summary.
