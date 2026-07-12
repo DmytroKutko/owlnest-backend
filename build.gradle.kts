@@ -47,4 +47,9 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty("user.timezone", "UTC")
+}
+
+tasks.named<JavaExec>("bootRun") {
+    systemProperty("user.timezone", "UTC")
 }

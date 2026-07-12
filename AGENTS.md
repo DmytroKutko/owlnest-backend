@@ -11,6 +11,7 @@ This is a Java 21 Spring Boot modular monolith. Keep one Gradle application init
 - `./gradlew build` compiles the project, runs tests, and creates the application artifact under `build/libs`.
 - `./gradlew clean` removes generated build output.
 - `docker compose up -d` starts PostgreSQL manually; use `docker compose down` when finished.
+- `docker compose --profile full-stack up --build` runs the backend and PostgreSQL as containers.
 
 Before the first run, copy `.env.example` to `.env`. Docker must be running for development and integration tests. Use the checked-in wrapper instead of system Gradle.
 

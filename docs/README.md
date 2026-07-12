@@ -4,14 +4,36 @@ This directory is the source of truth for product scope, architecture, feature c
 
 ## Local Setup
 
-Copy `.env.example` to `.env`, choose a local PostgreSQL password, and ensure Docker is running:
+Copy `.env.example` to `.env`, choose a local PostgreSQL password, and ensure Docker Desktop is running.
+
+### IntelliJ development
+
+Select the shared `OwlNest Backend (Local)` run configuration. The backend runs as a local Java process for debugging, while Spring Boot automatically starts only the PostgreSQL service from `compose.yaml`.
+
+The equivalent terminal command is:
 
 ```shell
 cp .env.example .env
 ./gradlew bootRun
 ```
 
-Docker Compose reads `.env`; Spring Boot then receives database connection details through its Docker Compose integration. Spring Boot does not automatically treat `.env` as an application configuration file. Application secrets must come from environment variables or an external secret manager, never committed `application*.yaml` files.
+### Full Docker stack
+
+Run both the backend and PostgreSQL as containers:
+
+```shell
+docker compose --profile full-stack up --build
+```
+
+Stop the stack without deleting database data:
+
+```shell
+docker compose --profile full-stack down
+```
+
+Docker Compose reads `.env`; Spring Boot then receives database connection details through its Docker Compose integration. Spring Boot does not automatically treat `.env` as an application configuration file. Application secrets must come from environment variables or an external secret manager, never committed `application*.yaml` files. PostgreSQL data is persisted in the named `postgres_data` volume.
+
+The backend JVM and tests use UTC regardless of the developer machine timezone. Persist timestamps as UTC values and convert them only at the API/client presentation boundary.
 
 ## Current Documents
 

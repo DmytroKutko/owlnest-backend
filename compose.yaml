@@ -1,9 +1,37 @@
 services:
   postgres:
-    image: 'postgres:latest'
+    image: 'postgres:18'
     environment:
       POSTGRES_DB: '${POSTGRES_DB:?Set POSTGRES_DB in .env}'
       POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}'
       POSTGRES_USER: '${POSTGRES_USER:?Set POSTGRES_USER in .env}'
     ports:
-      - '5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - 'postgres_data:/var/lib/postgresql'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    profiles: ['full-stack']
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: 'owlnest-backend:local'
+    environment:
+      JAVA_TOOL_OPTIONS: '-Duser.timezone=UTC'
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://postgres:5432/${POSTGRES_DB}'
+      SPRING_DATASOURCE_USERNAME: '${POSTGRES_USER}'
+      SPRING_DATASOURCE_PASSWORD: '${POSTGRES_PASSWORD}'
+    ports:
+      - '127.0.0.1:${SERVER_PORT:-8080}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
