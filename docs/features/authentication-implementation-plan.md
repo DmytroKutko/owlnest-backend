@@ -12,13 +12,13 @@ Implemented files and changes:
 
 ```text
 compose.yaml                              # add Keycloak service and health/dependency wiring
-.env / .env.example                      # realm, port, bootstrap admin, issuer, audience
+.env / .env.example                      # local ports and development credentials
 docker/keycloak/owlnest-realm.json       # versioned development realm/client configuration
 src/main/resources/application.yaml      # Resource Server issuer/audience/JWK settings
 docs/features/authentication.md           # keep runtime contract current
 ```
 
-Keycloak will run in development mode only. The realm import contains clients, roles, redirect URIs, and non-secret development configuration. Real credentials remain in `.env`.
+Keycloak runs in development mode only. The realm import contains clients, roles, redirect URIs, and non-secret development configuration. Real credentials remain in `.env`.
 
 The local canonical issuer is `http://localhost:8081/realms/owlnest`. The containerized backend uses the internal Keycloak JWK URL while still validating that external `iss` value. Device-reachable issuer configuration remains a separate deployment concern.
 
@@ -39,7 +39,7 @@ src/test/java/dev/dkutko/owlnest/identity/infrastructure/security/
 
 `AuthenticatedIdentity` contains only values needed by application code: provider, subject, email, verification state, username, and standard name claims. The application layer does not depend on `Jwt`, `SecurityContextHolder`, or Keycloak-specific classes.
 
-`SecurityConfiguration` will provide a `SecurityFilterChain`: public health, authenticated `/api/v1/**`, stateless sessions, bearer JWT, and explicit `401/403` behavior. Do not add `@EnableMethodSecurity` until a use case actually needs method-level authorization.
+`SecurityConfiguration` provides a `SecurityFilterChain`: public health, authenticated `/api/v1/**`, stateless sessions, bearer JWT, and Spring Security's standard bearer-token error behavior. Do not add `@EnableMethodSecurity` or custom `403` handling until a use case actually needs role-based authorization.
 
 ### Stage 3: Local Account Persistence
 
@@ -104,11 +104,11 @@ src/main/java/dev/dkutko/owlnest/identity/infrastructure/security/
 
 Prefer the standard `WWW-Authenticate` behavior first. Add a custom JSON body only when the client contract needs stable machine-readable error codes.
 
-## Dependency Plan
+## Dependency Use
 
-No Gradle dependency change is required before implementation. The verified runtime graph already contains:
+No application dependency change was required for this slice. The verified runtime graph already contains:
 
-| Existing dependency | Planned use |
+| Existing dependency | Current or intended use |
 | --- | --- |
 | `spring-boot-starter-security` | Security filter chain, stateless request authorization, `401/403`. |
 | `spring-boot-starter-security-oauth2-resource-server` | Bearer token filter, `JwtDecoder`, issuer/JWK discovery, claim validation. |
@@ -128,9 +128,9 @@ Dependencies intentionally not added:
 - Firebase Admin SDK: unrelated to the selected identity path; add later only for FCM.
 - Spring Modulith: useful for module verification later, but not required to implement authentication.
 
-## Annotation Plan
+## Annotation Use
 
-Each annotation will be added to `docs/annotations.md` when first implemented and explained before use:
+Each introduced annotation is recorded in `docs/annotations.md` and was explained before use:
 
 | Annotation | Intended location and reason |
 | --- | --- |

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,6 +29,13 @@ class CurrentProfileControllerIntegrationTests {
     @Test
     void rejectsRequestWithoutBearerToken() throws Exception {
         mockMvc.perform(get("/api/v1/profile/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsMalformedBearerToken() throws Exception {
+        mockMvc.perform(get("/api/v1/profile/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
                 .andExpect(status().isUnauthorized());
     }
 

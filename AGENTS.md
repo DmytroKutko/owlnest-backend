@@ -6,7 +6,7 @@ This is a Java 21 Spring Boot modular monolith. Keep one Gradle application init
 
 ## Build, Test, and Development Commands
 
-- `./gradlew bootRun` starts the application; Docker Compose supplies PostgreSQL.
+- `./gradlew bootRun` starts the application; Spring Boot Docker Compose support supplies PostgreSQL and Keycloak.
 - `./gradlew test` runs JUnit 5 tests through Testcontainers.
 - `./gradlew build` compiles the project, runs tests, and creates the application artifact under `build/libs`.
 - `./gradlew clean` removes generated build output.

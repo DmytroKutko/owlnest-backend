@@ -153,16 +153,14 @@ Custom Keycloak attributes can later be mapped into token claims and copied to P
 - TLS required outside local development;
 - UTC timestamps and a small, explicit clock-skew policy.
 
-## Testing Strategy
+## Verification Coverage
 
-- MVC security tests for missing, invalid, valid, and insufficient JWTs;
-- unit tests for claim-to-identity mapping and provisioning decisions;
-- PostgreSQL Testcontainers integration tests for uniqueness and transactions;
-- controller integration test for first and repeated `/profile/me` calls;
-- one live Keycloak smoke test after local realm wiring is implemented;
-- Flutter end-to-end verification only after the backend contract is green.
+- MVC integration tests for missing, malformed, and valid bearer authentication;
+- a unit test for mapping validated JWT claims into a provider-neutral identity;
+- PostgreSQL Testcontainers coverage for first and repeated `/profile/me` provisioning;
+- a live Keycloak smoke flow for token issuance, refresh, JWT validation, and the protected profile endpoint.
 
-The implemented slice passes the Gradle test suite and a live local smoke flow: Keycloak user creation, email/password token request through the development Postman client, JWT-protected profile request, and first-visit PostgreSQL provisioning.
+Role-specific `403` coverage will be added with the first endpoint that requires an authority; no such rule exists yet. Flutter Authorization Code + PKCE end-to-end coverage remains pending until the client flow is implemented.
 
 ## Non-goals for the First Slice
 
