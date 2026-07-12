@@ -133,6 +133,12 @@ SMTP becomes required before enabling email verification or self-service passwor
 
 Keycloak can run self-registration and collect built-in `firstName` and `lastName` fields plus custom attributes defined through its User Profile configuration. Required rules, validation, and who may view or edit each attribute can be configured there.
 
+The application's login page is the Keycloak authorization page for `owlnest-flutter`, not the Admin Console or Account Console. Flutter opens that page through Authorization Code + PKCE; the normal login form exposes a Register link, while `prompt=create` opens registration directly.
+
+For local browser convenience, the custom Keycloak welcome theme redirects `http://localhost:8081` to the OwlNest Account Console. The Account Console then starts its own secure authorization flow, so developers can enter through the short root URL without hard-coding an authentication-session URL. The Admin Console remains available at `http://localhost:8081/admin/`.
+
+The `owlnest` login theme inherits Keycloak's maintained `keycloak.v2` templates and overrides only CSS and brand assets. Sign in, registration, password recovery, and related authentication pages therefore share the warm OwlNest visual language without copying security-sensitive form templates into the repository.
+
 For OwlNest, keep the ownership boundary explicit:
 
 - Keycloak owns credentials and login identity: email, password, verification state, and optionally first/last name.
@@ -141,6 +147,8 @@ For OwlNest, keep the ownership boundary explicit:
 - Complete product-specific fields through an authenticated OwlNest onboarding endpoint after Keycloak registration.
 
 Custom Keycloak attributes can later be mapped into token claims and copied to PostgreSQL, but avoid placing sensitive or frequently changing profile data in access tokens. The first slice only seeds a local display name from standard name claims and creates the minimal profile.
+
+The accepted follow-up contract is documented in [Profile Onboarding](profile-onboarding.md).
 
 ## Security Defaults
 

@@ -19,7 +19,8 @@ Recommended local order:
 3. `Development User Setup / Get Admin Token`
 4. `Development User Setup / Create Test User`
 5. `Authentication / Development Email-Password Login`
-6. `Profile / Get Current Profile`
+6. `Profile / Complete Profile Onboarding`
+7. `Profile / Get Current Profile`
 
 Credentials remain only in `.env` and the ignored local Postman environment; they are not committed in the collection. A collection-level pre-request script checks the variables required by each request and reports a clear error if the environment or a generated token is missing.
 
@@ -33,6 +34,7 @@ The test-user JSON receives email, password, first name, and last name from the 
 - `Create Test User` calls the Keycloak Admin API. `201` means the user was created; `409` means that email already exists.
 - `Development Email-Password Login` exchanges the test user's email and password for access and refresh tokens and saves both automatically.
 - `Refresh Access Token` replaces expired tokens without asking for the password again.
+- `Complete Profile Onboarding` submits OwlNest-owned username, display name, bio, birth date, and gender.
 - `Get Current Profile` sends `Authorization: Bearer {{accessToken}}` to OwlNest Backend and provisions the local PostgreSQL account/profile on the first request.
 
 If `Create Test User` returns `409`, keep the password previously assigned to that user or choose another email. Creating the same user again does not replace its password.

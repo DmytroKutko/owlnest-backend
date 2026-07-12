@@ -1,0 +1,201 @@
+:root {
+    --owlnest-background: #ffffff;
+    --owlnest-surface: #fbf7f1;
+    --owlnest-primary: #b48b5f;
+    --owlnest-primary-hover: #9b744e;
+    --owlnest-text: #43372f;
+    --owlnest-muted: #756a62;
+    --owlnest-border: #e6ddd3;
+    --owlnest-error: #a85f5b;
+    --owlnest-success: #6e8469;
+    --keycloak-card-top-color: transparent;
+    --pf-v5-global--primary-color--100: var(--owlnest-primary);
+    --pf-v5-global--primary-color--200: var(--owlnest-primary-hover);
+}
+
+html.login-pf,
+.login-pf body {
+    min-height: 100%;
+    background: var(--owlnest-background);
+}
+
+.login-pf body {
+    color: var(--owlnest-text);
+    font-family: ui-rounded, "Nunito", "Inter", "Google Sans", system-ui, sans-serif;
+}
+
+.pf-v5-c-login {
+    min-height: 100vh;
+}
+
+.pf-v5-c-login__container {
+    grid-template-columns: minmax(20rem, 30rem);
+    row-gap: 0.75rem;
+    padding: 2.5rem 1.25rem;
+}
+
+#kc-header-wrapper {
+    width: 13.75rem;
+    height: 13.75rem;
+    margin: 0 auto;
+    background: var(--owlnest-background) url("../img/owlnest.png") no-repeat center;
+    background-size: contain;
+    color: transparent !important;
+    font-size: 0;
+    letter-spacing: 0;
+    line-height: 0;
+}
+
+.pf-v5-c-login__main {
+    overflow: hidden;
+    border: 1px solid rgba(180, 139, 95, 0.14);
+    border-radius: 1.75rem;
+    background: var(--owlnest-surface);
+    box-shadow: 0 1.5rem 3.75rem rgba(67, 55, 47, 0.12),
+        0 0.25rem 0.875rem rgba(67, 55, 47, 0.06);
+}
+
+.pf-v5-c-login__main-header {
+    padding: 2rem 2.5rem 1rem;
+    border-top: 0;
+}
+
+.pf-v5-c-login__main-body {
+    padding: 0 2.5rem 2rem;
+}
+
+#kc-page-title {
+    color: var(--owlnest-text);
+    font-size: 1.75rem;
+    font-weight: 750;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+}
+
+.pf-v5-c-form__label-text,
+.pf-v5-c-check__label {
+    color: var(--owlnest-text);
+    font-weight: 650;
+}
+
+.pf-v5-c-form-control {
+    min-height: 3rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background: var(--owlnest-background);
+    box-shadow: inset 0 0 0 1px var(--owlnest-border);
+}
+
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after {
+    border: 0;
+}
+
+.pf-v5-c-form-control:focus-within {
+    box-shadow: inset 0 0 0 1px var(--owlnest-primary),
+        0 0 0 0.2rem rgba(180, 139, 95, 0.18);
+}
+
+.pf-v5-c-form-control input {
+    color: var(--owlnest-text);
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control {
+    border-radius: 0.5rem 0 0 0.5rem;
+}
+
+.pf-v5-c-button.pf-m-control {
+    border: 0;
+    border-radius: 0 0.5rem 0.5rem 0;
+    background: var(--owlnest-background);
+    color: var(--owlnest-muted);
+    box-shadow: inset 0 0 0 1px var(--owlnest-border);
+}
+
+.pf-v5-c-button.pf-m-primary {
+    min-height: 3rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--owlnest-primary);
+    color: #ffffff;
+    font-weight: 750;
+    box-shadow: 0 0.5rem 1.125rem rgba(155, 116, 78, 0.2);
+    transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+    background: var(--owlnest-primary-hover);
+    box-shadow: 0 0.625rem 1.375rem rgba(155, 116, 78, 0.26);
+    transform: translateY(-1px);
+}
+
+.pf-v5-c-check__input {
+    accent-color: var(--owlnest-primary);
+}
+
+a,
+.pf-v5-c-button.pf-m-link {
+    color: var(--owlnest-primary-hover);
+    font-weight: 650;
+}
+
+a:hover,
+a:focus,
+.pf-v5-c-button.pf-m-link:hover,
+.pf-v5-c-button.pf-m-link:focus {
+    color: var(--owlnest-text);
+}
+
+.pf-v5-c-login__main-footer-band {
+    border-top-color: var(--owlnest-border);
+    background: rgba(255, 255, 255, 0.46);
+    color: var(--owlnest-muted);
+}
+
+.pf-v5-c-alert {
+    border-radius: 0.875rem;
+}
+
+.pf-v5-c-alert.pf-m-danger {
+    background: #fff2f0;
+    color: var(--owlnest-error);
+}
+
+.pf-v5-c-alert.pf-m-success {
+    background: #f1f6ef;
+    color: var(--owlnest-success);
+}
+
+.kc-feedback-text,
+.pf-v5-c-form__helper-text {
+    color: var(--owlnest-muted);
+}
+
+@media (max-width: 37.5rem) {
+    .pf-v5-c-login__container {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 1rem;
+    }
+
+    #kc-header-wrapper {
+        width: 10rem;
+        height: 10rem;
+    }
+
+    .pf-v5-c-login__main {
+        border-radius: 1.375rem;
+    }
+
+    .pf-v5-c-login__main-header {
+        padding: 1.5rem 1.25rem 0.875rem;
+    }
+
+    .pf-v5-c-login__main-body {
+        padding: 0 1.25rem 1.5rem;
+    }
+
+    #kc-page-title {
+        font-size: 1.5rem;
+    }
+}

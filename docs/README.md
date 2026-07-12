@@ -55,6 +55,7 @@ The backend JVM and tests use UTC regardless of the developer machine timezone. 
 - [Development Workflow](development-workflow.md) — required planning and explanation sequence for each feature.
 - [Authentication](features/authentication.md) — authentication contract, SMTP decision, and profile ownership boundaries.
 - [Authentication Implementation Plan](features/authentication-implementation-plan.md) — implemented files, dependencies, annotations, stages, and alternatives.
+- [Profile Onboarding](features/profile-onboarding.md) — browser registration boundary and authenticated product-profile contract.
 - [ADR-0001](decisions/0001-feature-first-modular-monolith.md) — accepted feature-first modular-monolith structure.
 - [ADR-0002](decisions/0002-use-keycloak-as-identity-provider.md) — accepted Keycloak identity-provider decision.
 

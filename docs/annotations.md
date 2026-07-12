@@ -40,6 +40,10 @@ All three make a class discoverable during component scanning and normally creat
 
 These Jakarta Persistence annotations tell Hibernate how Java objects map to database tables, identifiers, columns, and uniqueness rules. Hibernate reads the metadata when the persistence context starts and tracks loaded entities within a transaction. Flyway remains the schema source of truth; the mappings must match its SQL migrations. A protected no-argument constructor is required so Hibernate can instantiate an entity.
 
+### `@Enumerated(EnumType.STRING)`
+
+Stores an enum by its constant name, such as `PREFER_NOT_TO_SAY`, instead of its numeric position. String storage is readable and remains stable when enum constants are reordered; renaming a constant still requires a data migration.
+
 ### `@Transactional`
 
 Spring wraps calls made through the managed service proxy in a database transaction. A successful call commits; an unchecked exception rolls it back by default. Use it on application operations that must be atomic, such as provisioning an account and profile. Calling a transactional method from another method on the same object bypasses the proxy and is a common pitfall.
@@ -49,6 +53,18 @@ Spring wraps calls made through the managed service proxy in a database transact
 ### `@RestController`, `@RequestMapping`, and `@GetMapping`
 
 `@RestController` registers the class as an MVC controller whose return values are serialized into the HTTP response body. `@RequestMapping` defines the shared route prefix, while `@GetMapping` selects a GET route. Spring resolves these mappings during startup and invokes the matching method per request. Controllers should delegate business work to application services and return DTOs, not JPA entities.
+
+### `@PutMapping`, `@RequestBody`, and `@Valid`
+
+`@PutMapping` selects the HTTP PUT operation used for a repeatable complete profile submission. `@RequestBody` deserializes request JSON into the request record. `@Valid` then invokes Jakarta Bean Validation before the controller method runs; invalid input returns `400` without entering the application service.
+
+### `@NotBlank`, `@Size`, `@Pattern`, and `@Past`
+
+These Bean Validation constraints define input rules declaratively: required non-whitespace text, length limits, username character rules, and a birth date before today. They validate the API boundary; domain methods still protect essential non-null invariants when called outside HTTP.
+
+### `@RestControllerAdvice` and `@ExceptionHandler`
+
+`@RestControllerAdvice` registers centralized API exception mapping during startup. `@ExceptionHandler` selects a method when the declared exception escapes a controller. The profile handler converts a username conflict into a `409` Problem Details response without coupling the application exception to Spring MVC.
 
 ### `@ServiceConnection`
 

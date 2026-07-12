@@ -7,6 +7,8 @@ public interface ProfileRepository {
 
     Optional<Profile> findByAccountId(UUID accountId);
 
+    boolean existsByUsernameIgnoreCaseAndAccountIdNot(String username, UUID accountId);
+
     Profile save(Profile profile);
 
 }

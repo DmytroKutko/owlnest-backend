@@ -22,6 +22,11 @@ public class JpaProfileRepositoryAdapter implements ProfileRepository {
     }
 
     @Override
+    public boolean existsByUsernameIgnoreCaseAndAccountIdNot(String username, UUID accountId) {
+        return repository.existsByUsernameIgnoreCaseAndAccountIdNot(username, accountId);
+    }
+
+    @Override
     public Profile save(Profile profile) {
         return repository.save(profile);
     }

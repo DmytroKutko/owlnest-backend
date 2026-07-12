@@ -18,7 +18,7 @@ services:
 
   keycloak:
     image: 'quay.io/keycloak/keycloak:26.7.0'
-    command: ['start-dev', '--import-realm']
+    command: ['start-dev', '--import-realm', '--spi-theme--welcome-theme=owlnest']
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: '${KEYCLOAK_ADMIN_USERNAME:?Set KEYCLOAK_ADMIN_USERNAME in .env}'
       KC_BOOTSTRAP_ADMIN_PASSWORD: '${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}'
@@ -29,6 +29,7 @@ services:
     volumes:
       - 'keycloak_data:/opt/keycloak/data'
       - './docker/keycloak/owlnest-realm.json:/opt/keycloak/data/import/owlnest-realm.json:ro'
+      - './docker/keycloak/themes/owlnest:/opt/keycloak/themes/owlnest:ro'
     healthcheck:
       test: ['CMD-SHELL', 'bash -c "exec 3<>/dev/tcp/127.0.0.1/9000 && printf \"GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \"200 OK\" <&3"']
       interval: 10s

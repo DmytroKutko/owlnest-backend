@@ -1,7 +1,9 @@
 package dev.dkutko.owlnest.profile.api;
 
 import dev.dkutko.owlnest.profile.application.CurrentProfile;
+import dev.dkutko.owlnest.profile.domain.Gender;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record ProfileResponse(
@@ -9,6 +11,9 @@ public record ProfileResponse(
         String username,
         String displayName,
         String bio,
+        LocalDate birthDate,
+        Gender gender,
+        boolean onboardingCompleted,
         String email,
         boolean emailVerified
 ) {
@@ -19,6 +24,9 @@ public record ProfileResponse(
                 profile.username(),
                 profile.displayName(),
                 profile.bio(),
+                profile.birthDate(),
+                profile.gender(),
+                profile.onboardingCompleted(),
                 profile.email(),
                 profile.emailVerified()
         );

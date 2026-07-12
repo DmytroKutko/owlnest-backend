@@ -1,6 +1,7 @@
 {
   "realm": "owlnest",
   "displayName": "OwlNest",
+  "loginTheme": "owlnest",
   "enabled": true,
   "sslRequired": "external",
   "registrationAllowed": true,
@@ -11,6 +12,7 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
+  "passwordPolicy": "length(8) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername and notEmail",
   "accessTokenLifespan": 300,
   "clients": [
     {

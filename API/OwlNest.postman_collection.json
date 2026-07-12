@@ -32,6 +32,7 @@
           "  'Create Test User': ['keycloakUrl', 'realm', 'adminAccessToken', 'email', 'password', 'firstName', 'lastName'],",
           "  'Development Email-Password Login': ['keycloakUrl', 'realm', 'clientId', 'email', 'password'],",
           "  'Refresh Access Token': ['keycloakUrl', 'realm', 'clientId', 'refreshToken'],",
+          "  'Complete Profile Onboarding': ['baseUrl', 'accessToken'],",
           "  'Get Current Profile': ['baseUrl', 'accessToken']",
           "};",
           "const required = requirementsByRequest[pm.info.requestName] || [];",
@@ -273,6 +274,28 @@
     {
       "name": "Profile",
       "item": [
+        {
+          "name": "Complete Profile Onboarding",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john.doe\",\n  \"displayName\": \"John Doe\",\n  \"bio\": \"Building OwlNest\",\n  \"birthDate\": \"1995-04-20\",\n  \"gender\": \"PREFER_NOT_TO_SAY\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile/me"
+          }
+        },
         {
           "name": "Get Current Profile",
           "request": {

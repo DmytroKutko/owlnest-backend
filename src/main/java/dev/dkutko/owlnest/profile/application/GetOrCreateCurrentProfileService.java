@@ -34,24 +34,58 @@ public class GetOrCreateCurrentProfileService {
     public CurrentProfile getOrCreate() {
         AuthenticatedIdentity identity = currentIdentityProvider.getCurrentIdentity();
         Account account = ensureAccountExistsService.ensureExists(identity);
-        Profile profile = profileRepository
-                .findByAccountId(account.getId())
-                .orElseGet(() -> profileRepository.save(createDefaultProfile(account, identity)));
+        Profile profile = getOrCreateProfile(account, identity, Instant.now());
 
+        return currentProfile(account, profile);
+    }
+
+    @Transactional
+    public CurrentProfile completeOnboarding(CompleteProfileOnboardingCommand command) {
+        AuthenticatedIdentity identity = currentIdentityProvider.getCurrentIdentity();
+        Account account = ensureAccountExistsService.ensureExists(identity);
+        Instant now = Instant.now();
+        Profile profile = getOrCreateProfile(account, identity, now);
+
+        if (profileRepository.existsByUsernameIgnoreCaseAndAccountIdNot(command.username(), account.getId())) {
+            throw new UsernameAlreadyInUseException(command.username());
+        }
+
+        profile.completeOnboarding(
+                command.username(),
+                command.displayName(),
+                command.bio(),
+                command.birthDate(),
+                command.gender(),
+                now
+        );
+
+        return currentProfile(account, profile);
+    }
+
+    private Profile getOrCreateProfile(Account account, AuthenticatedIdentity identity, Instant now) {
+        return profileRepository
+                .findByAccountId(account.getId())
+                .orElseGet(() -> profileRepository.save(createDefaultProfile(account, identity, now)));
+    }
+
+    private CurrentProfile currentProfile(Account account, Profile profile) {
         return new CurrentProfile(
                 account.getId(),
                 profile.getUsername(),
                 profile.getDisplayName(),
                 profile.getBio(),
+                profile.getBirthDate(),
+                profile.getGender(),
+                profile.isOnboardingCompleted(),
                 account.getEmail(),
                 account.isEmailVerified()
         );
     }
 
-    private Profile createDefaultProfile(Account account, AuthenticatedIdentity identity) {
+    private Profile createDefaultProfile(Account account, AuthenticatedIdentity identity, Instant now) {
         String compactId = account.getId().toString().replace("-", "");
         String username = "user_" + compactId.substring(0, 12);
-        return Profile.create(account.getId(), username, displayName(identity), Instant.now());
+        return Profile.create(account.getId(), username, displayName(identity), now);
     }
 
     private String displayName(AuthenticatedIdentity identity) {

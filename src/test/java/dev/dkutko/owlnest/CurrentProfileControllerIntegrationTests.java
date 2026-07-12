@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,7 +58,8 @@ class CurrentProfileControllerIntegrationTests {
                 .andExpect(jsonPath("$.username").value(org.hamcrest.Matchers.startsWith("user_")))
                 .andExpect(jsonPath("$.displayName").value("Profile User"))
                 .andExpect(jsonPath("$.email").value("profile.user@example.com"))
-                .andExpect(jsonPath("$.emailVerified").value(true));
+                .andExpect(jsonPath("$.emailVerified").value(true))
+                .andExpect(jsonPath("$.onboardingCompleted").value(false));
 
         mockMvc.perform(authenticatedRequest)
                 .andExpect(status().isOk());
@@ -80,6 +82,86 @@ class CurrentProfileControllerIntegrationTests {
 
         assertThat(accountCount).isEqualTo(1);
         assertThat(profileCount).isEqualTo(1);
+    }
+
+    @Test
+    void completesProfileOnboarding() throws Exception {
+        mockMvc.perform(put("/api/v1/profile/me")
+                        .with(jwt().jwt(token -> token
+                                .subject("onboarding-user")
+                                .claim("email", "onboarding.user@example.com")
+                                .claim("email_verified", false)
+                                .claim("given_name", "Onboarding")
+                                .claim("family_name", "User")
+                        ))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "username": "Onboarding.User",
+                                  "displayName": "OwlNest Member",
+                                  "bio": "Building a social profile",
+                                  "birthDate": "1995-04-20",
+                                  "gender": "PREFER_NOT_TO_SAY"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("onboarding.user"))
+                .andExpect(jsonPath("$.displayName").value("OwlNest Member"))
+                .andExpect(jsonPath("$.bio").value("Building a social profile"))
+                .andExpect(jsonPath("$.birthDate").value("1995-04-20"))
+                .andExpect(jsonPath("$.gender").value("PREFER_NOT_TO_SAY"))
+                .andExpect(jsonPath("$.onboardingCompleted").value(true));
+
+        Boolean onboardingCompleted = jdbcTemplate.queryForObject(
+                """
+                        SELECT p.onboarding_completed
+                        FROM profile p
+                        JOIN identity_account a ON a.id = p.account_id
+                        WHERE a.external_subject = ?
+                        """,
+                Boolean.class,
+                "onboarding-user"
+        );
+
+        assertThat(onboardingCompleted).isTrue();
+    }
+
+    @Test
+    void rejectsInvalidProfileOnboardingInput() throws Exception {
+        mockMvc.perform(put("/api/v1/profile/me")
+                        .with(jwt().jwt(token -> token.subject("invalid-onboarding-user")))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "username": "invalid username",
+                                  "displayName": "Invalid User",
+                                  "birthDate": "2999-01-01"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsUsernameAlreadyUsedByAnotherProfile() throws Exception {
+        String onboardingBody = """
+                {
+                  "username": "shared.username",
+                  "displayName": "Shared Username"
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/profile/me")
+                        .with(jwt().jwt(token -> token.subject("username-owner")))
+                        .contentType("application/json")
+                        .content(onboardingBody))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/profile/me")
+                        .with(jwt().jwt(token -> token.subject("username-conflict-user")))
+                        .contentType("application/json")
+                        .content(onboardingBody))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("profile.username_conflict"));
     }
 
 }
