@@ -11,7 +11,7 @@ OwlNest Backend supports a Flutter social-media application. The initial product
 - later, persisted text messaging with live WebSocket delivery;
 - later, Firebase Cloud Messaging push notifications.
 
-Media uploads, recommendation algorithms, microservices, and message brokers are outside the first versions unless a concrete requirement justifies them.
+The first versions remain text-only. A later media slice will add user avatars and post images backed by Cloudflare R2 object storage. Recommendation algorithms, microservices, and message brokers remain outside the initial scope unless a concrete requirement justifies them.
 
 ## Architectural Preference
 

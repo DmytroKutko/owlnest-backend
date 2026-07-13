@@ -19,6 +19,7 @@ dev.dkutko.owlnest
 ├── socialgraph    # follows, friend requests, friendships
 ├── post           # posts, comments, likes, reposts
 ├── feed           # chronological feed queries
+├── media          # media metadata and external object-storage lifecycle
 ├── messaging      # conversations, messages, WebSocket delivery
 ├── notification   # in-app notifications and FCM adapter
 └── shared         # small technical concerns only: errors, time, IDs
@@ -64,6 +65,12 @@ Use direct application-service calls when one module needs an immediate result. 
 
 Friendship and follow relationships remain separate: follow is directional; friendship requires request and acceptance and is symmetric after acceptance. External sharing is initially a Flutter/client responsibility unless server-side analytics becomes a requirement.
 
+## Media Storage Direction
+
+Media remains outside the initial text-only slices. When avatars and post images are introduced, use Cloudflare R2 as the planned object store. Store object keys, ownership, content type, size, dimensions, and lifecycle state in PostgreSQL; do not store image binaries in PostgreSQL or a backend container filesystem.
+
+The preferred upload flow is a short-lived presigned URL issued by the backend after authentication and validation, followed by a direct Flutter-to-R2 upload. Keep the R2 integration behind a media-owned storage port so the provider can be replaced without changing post or profile domain logic. Confirm current R2 quotas, pricing, image-processing needs, and deletion/privacy rules before implementation; no R2 dependency is required until this slice begins.
+
 ## Delivery Roadmap
 
 1. **Foundation:** local profiles, configuration profiles, Flyway baseline, error format, security decision, API versioning, test strategy.
@@ -71,8 +78,9 @@ Friendship and follow relationships remain separate: follow is directional; frie
 3. **Social graph:** follow/unfollow, friend request, accept/reject, list relationships.
 4. **Publishing:** create/read/delete text posts and comments with ownership rules.
 5. **Engagement and feed:** likes, reposts, chronological cursor-paginated feed.
-6. **Notifications:** in-app notification records, then FCM device tokens and push delivery.
-7. **Messaging:** conversations and persisted text messages over REST, then WebSocket live delivery.
+6. **Media:** Cloudflare R2 integration, avatar uploads, then post images and cleanup rules.
+7. **Notifications:** in-app notification records, then FCM device tokens and push delivery.
+8. **Messaging:** conversations and persisted text messages over REST, then WebSocket live delivery.
 
 Each step should be a vertical slice containing migration, domain behavior, API contract, authorization, tests, and documentation.
 
