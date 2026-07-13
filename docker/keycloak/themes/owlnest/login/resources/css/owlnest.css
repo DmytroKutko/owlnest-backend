@@ -79,7 +79,6 @@ html.login-pf,
 }
 
 .pf-v5-c-form-control {
-    min-height: 3rem;
     overflow: hidden;
     border-radius: 0.5rem;
     background: var(--owlnest-background);
