@@ -8,6 +8,8 @@ readonly MANIFEST_FILE="$PROJECT_DIR/scripts/seed-data/community-demo-v1.json"
 readonly STATE_DIR="$PROJECT_DIR/scripts/.local"
 readonly INVENTORY_FILE="$STATE_DIR/community-demo-v1.inventory.json"
 readonly MANIFEST_VERSION="community-demo-v1"
+readonly SEED_GROUP_NAME="owlnest-local-seed-$MANIFEST_VERSION"
+readonly SEED_GROUP_PATH="/$SEED_GROUP_NAME"
 
 KEYCLOAK_USERS_CREATED=0
 KEYCLOAK_USERS_REUSED=0
@@ -331,6 +333,33 @@ jq -er '.access_token | strings | select(length > 0)' "$LAST_RESPONSE" > "$ADMIN
 chmod 600 "$ADMIN_TOKEN_FILE"
 readonly ADMIN_TOKEN_FILE
 
+encoded_seed_group_name="$(printf '%s' "$SEED_GROUP_NAME" | urlencode)"
+http_request GET "$KEYCLOAK_URL/admin/realms/$REALM/groups?search=$encoded_seed_group_name&exact=true&briefRepresentation=true&max=100" \
+    "$ADMIN_TOKEN_FILE" ""
+require_status "200" "looking up the local seed ownership group"
+seed_group_matches="$(jq --arg name "$SEED_GROUP_NAME" --arg path "$SEED_GROUP_PATH" \
+    '[.[] | select(.name == $name and .path == $path)]' "$LAST_RESPONSE")"
+seed_group_count="$(jq 'length' <<< "$seed_group_matches")"
+if [[ "$seed_group_count" == "0" ]]; then
+    seed_group_payload="$TEMP_DIR/create-seed-group.json"
+    jq -n --arg name "$SEED_GROUP_NAME" '{name: $name}' > "$seed_group_payload"
+    http_request POST "$KEYCLOAK_URL/admin/realms/$REALM/groups" \
+        "$ADMIN_TOKEN_FILE" "$seed_group_payload"
+    require_status "201" "creating the local seed ownership group"
+
+    http_request GET "$KEYCLOAK_URL/admin/realms/$REALM/groups?search=$encoded_seed_group_name&exact=true&briefRepresentation=true&max=100" \
+        "$ADMIN_TOKEN_FILE" ""
+    require_status "200" "resolving the local seed ownership group"
+    seed_group_matches="$(jq --arg name "$SEED_GROUP_NAME" --arg path "$SEED_GROUP_PATH" \
+        '[.[] | select(.name == $name and .path == $path)]' "$LAST_RESPONSE")"
+    seed_group_count="$(jq 'length' <<< "$seed_group_matches")"
+fi
+if [[ "$seed_group_count" != "1" ]]; then
+    die_conflict "Expected one top-level local seed ownership group, found $seed_group_count."
+fi
+SEED_GROUP_ID="$(jq -er '.[0].id' <<< "$seed_group_matches")"
+readonly SEED_GROUP_ID
+
 login_user() {
     local email=$1
     local token_file=$2
@@ -366,6 +395,7 @@ reset_user_password() {
 
 echo "Synchronizing six marked local Keycloak identities and OwlNest profiles..."
 while IFS= read -r user; do
+    user_created_this_run=false
     key="$(jq -r '.key' <<< "$user")"
     email="$(jq -r '.email' <<< "$user")"
     username="$(jq -r '.username' <<< "$user")"
@@ -380,7 +410,7 @@ while IFS= read -r user; do
     user_count="$(jq 'length' "$LAST_RESPONSE")"
     if [[ "$user_count" == "0" ]]; then
         user_payload="$TEMP_DIR/create-user-$key.json"
-        jq --arg marker "$MANIFEST_VERSION" '
+        jq --arg group "$SEED_GROUP_PATH" '
             {
                 username: .email,
                 email: .email,
@@ -388,12 +418,13 @@ while IFS= read -r user; do
                 enabled: true,
                 firstName: .firstName,
                 lastName: .lastName,
-                attributes: {owlnestSeed: [$marker]}
+                groups: [$group]
             }
         ' <<< "$user" > "$user_payload"
         http_request POST "$KEYCLOAK_URL/admin/realms/$REALM/users" "$ADMIN_TOKEN_FILE" "$user_payload"
         require_status "201" "creating marked seed user $email"
         KEYCLOAK_USERS_CREATED=$((KEYCLOAK_USERS_CREATED + 1))
+        user_created_this_run=true
 
         http_request GET "$KEYCLOAK_URL/admin/realms/$REALM/users?email=$encoded_email&exact=true" "$ADMIN_TOKEN_FILE" ""
         require_status "200" "resolving newly created seed user $email"
@@ -405,11 +436,23 @@ while IFS= read -r user; do
     if [[ "$user_count" != "1" ]]; then
         die_conflict "Expected one Keycloak user for $email, found $user_count."
     fi
-    if ! jq -e --arg marker "$MANIFEST_VERSION" '.[0].attributes.owlnestSeed // [] | index($marker) != null' \
-        "$LAST_RESPONSE" >/dev/null; then
-        die_conflict "Refusing to adopt unmarked existing Keycloak user $email."
-    fi
     keycloak_user_id="$(jq -er '.[0].id' "$LAST_RESPONSE")"
+    http_request GET "$KEYCLOAK_URL/admin/realms/$REALM/users/$keycloak_user_id/groups?briefRepresentation=true&max=100" \
+        "$ADMIN_TOKEN_FILE" ""
+    require_status "200" "checking seed ownership for $email"
+    if ! jq -e --arg groupId "$SEED_GROUP_ID" 'map(.id) | index($groupId) != null' \
+        "$LAST_RESPONSE" >/dev/null && [[ "$user_created_this_run" == "true" ]]; then
+        http_request PUT "$KEYCLOAK_URL/admin/realms/$REALM/users/$keycloak_user_id/groups/$SEED_GROUP_ID" \
+            "$ADMIN_TOKEN_FILE" ""
+        require_status "204" "marking newly created seed user $email"
+        http_request GET "$KEYCLOAK_URL/admin/realms/$REALM/users/$keycloak_user_id/groups?briefRepresentation=true&max=100" \
+            "$ADMIN_TOKEN_FILE" ""
+        require_status "200" "verifying seed ownership for $email"
+    fi
+    if ! jq -e --arg groupId "$SEED_GROUP_ID" 'map(.id) | index($groupId) != null' \
+        "$LAST_RESPONSE" >/dev/null; then
+        die_conflict "Refusing to adopt Keycloak user $email outside the local seed ownership group."
+    fi
     token_file="$TEMP_DIR/token-$key"
 
     if login_user "$email" "$token_file"; then
