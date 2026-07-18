@@ -33,7 +33,7 @@ echo "Stopping the current OwlNest stack..."
 echo "Rebuilding the backend image from the current sources..."
 "${COMPOSE[@]}" build
 
-echo "Starting PostgreSQL, Keycloak, and OwlNest Backend..."
+echo "Starting PostgreSQL, Redis, Keycloak, and OwlNest Backend..."
 "${COMPOSE[@]}" up -d --wait --wait-timeout 180
 
 "$PROJECT_DIR/docker/keycloak/configure-local-realm.sh"
@@ -44,5 +44,6 @@ echo
 echo "OwlNest stack is ready:"
 echo "  Backend:  http://$("${COMPOSE[@]}" port backend 8080)"
 echo "  Keycloak: http://$("${COMPOSE[@]}" port keycloak 8080)"
+echo "  Redis:    $("${COMPOSE[@]}" port redis 6379)"
 
 "$PROJECT_DIR/API/generate-postman-environment.sh"

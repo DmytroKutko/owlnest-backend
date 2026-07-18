@@ -67,7 +67,7 @@ Required access-token claims:
 | `nbf` | Not valid before | Premature tokens receive `401`. |
 | `email` | Account email | Copied to the local account when present. |
 | `email_verified` | Verification state | Stored locally; the initial local realm permits unverified email until SMTP is configured. |
-| `preferred_username` | Keycloak-facing username | May seed a profile but does not replace OwlNest username rules. |
+| `preferred_username` | Keycloak-facing username | Available to identity services but never becomes public profile data before explicit OwlNest onboarding. |
 
 The backend must not trust a claim merely because it exists; signature, issuer, audience, and time validation happen first.
 
@@ -113,7 +113,7 @@ Initial behavior:
 - valid token and existing account → `200 OK`;
 - valid token and first visit → create account/profile, then `200 OK`;
 - authenticated identity without required permission → `403 Forbidden`;
-- duplicate provisioning race → the database unique constraint prevents duplicate identities; explicit retry handling can be added when concurrent first-login traffic becomes relevant.
+- duplicate provisioning race → miss-only PostgreSQL transaction advisory locks plus a recheck serialize first account/profile creation; established identities remain lock-free.
 
 ## Configuration and Networking
 
@@ -148,7 +148,7 @@ For OwlNest, keep the ownership boundary explicit:
 - Store `birthDate`, not mutable `age`; calculate age when needed.
 - Complete product-specific fields through an authenticated OwlNest onboarding endpoint after Keycloak registration.
 
-Custom Keycloak attributes can later be mapped into token claims and copied to PostgreSQL, but avoid placing sensitive or frequently changing profile data in access tokens. The first slice only seeds a local display name from standard name claims and creates the minimal profile.
+Custom Keycloak attributes can later be mapped into token claims and copied to PostgreSQL, but avoid placing sensitive or frequently changing profile data in access tokens. A minimal incomplete profile uses generated `user_<id>` and neutral `OwlNest user`; only explicit onboarding chooses public username/display name.
 
 The accepted follow-up contract is documented in [Profile Onboarding](profile-onboarding.md).
 

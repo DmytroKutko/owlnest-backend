@@ -16,7 +16,7 @@ Use Keycloak as the OAuth2/OpenID Connect identity provider. Flutter is a public
 
 Keycloak owns credentials and token lifecycle. OwlNest owns a local account UUID, product profile, authorization decisions, and business data. A unique `(provider, external_subject)` mapping connects a local account to Keycloak's `sub` claim.
 
-Do not add a Keycloak-specific Java adapter. Use Spring Security's standard OIDC/JWT support and Keycloak's discovery/JWK endpoints.
+Do not add a Keycloak-specific Java library integration. Use Spring Security's standard OIDC/JWT support and Keycloak's discovery/JWK endpoints.
 
 ## Alternatives
 
@@ -39,7 +39,7 @@ Advantages: initially appears simple. Disadvantages: mixes identity with busines
 - Backend endpoints do not implement `/login`, `/register`, `/refresh`, or `/logout`.
 - The backend must validate both issuer and audience and distinguish `401 Unauthorized` from `403 Forbidden`.
 - A canonical development issuer must be chosen that works consistently for Flutter, local backend, and containerized backend.
-- Replacing Keycloak later affects the identity adapter, while local account IDs and business foreign keys remain stable.
+- Replacing Keycloak later affects the identity security implementation, while local account IDs and business foreign keys remain stable.
 
 ## References
 

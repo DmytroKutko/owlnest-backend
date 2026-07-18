@@ -26,18 +26,18 @@ The local canonical issuer is `http://localhost:8081/realms/owlnest`. The contai
 
 ```text
 src/main/java/dev/dkutko/owlnest/identity/
-├── application/
-│   ├── AuthenticatedIdentity.java        # provider-neutral identity record
-│   └── CurrentIdentityProvider.java      # application port for the current request identity
-└── infrastructure/security/
+├── service/
+│   ├── AuthenticatedIdentity.java        # provider-neutral identity record used by services
+│   └── CurrentIdentityProvider.java      # interface for the current request identity
+└── security/
     ├── SecurityConfiguration.java        # endpoint rules and Resource Server setup
     └── SpringSecurityIdentityProvider.java # maps validated Jwt to AuthenticatedIdentity
 
-src/test/java/dev/dkutko/owlnest/identity/infrastructure/security/
+src/test/java/dev/dkutko/owlnest/identity/security/
 └── SpringSecurityIdentityProviderTest.java
 ```
 
-`AuthenticatedIdentity` contains only values needed by application code: provider, subject, email, verification state, username, and standard name claims. The application layer does not depend on `Jwt`, `SecurityContextHolder`, or Keycloak-specific classes.
+`AuthenticatedIdentity` contains only values needed by service code: provider, subject, email, verification state, username, and standard name claims. Service classes do not depend on `Jwt`, `SecurityContextHolder`, or Keycloak-specific classes.
 
 `SecurityConfiguration` provides a `SecurityFilterChain`: public health, authenticated `/api/v1/**`, stateless sessions, bearer JWT, and Spring Security's standard bearer-token error behavior. Do not add `@EnableMethodSecurity` or custom `403` handling until a use case actually needs role-based authorization.
 
@@ -46,19 +46,19 @@ src/test/java/dev/dkutko/owlnest/identity/infrastructure/security/
 ```text
 src/main/java/dev/dkutko/owlnest/identity/
 ├── domain/
-│   ├── Account.java                      # local UUID and external identity mapping
-│   └── AccountRepository.java            # persistence port
-├── application/
+│   └── Account.java                      # local UUID and external identity mapping
+├── service/
 │   └── EnsureAccountExistsService.java   # idempotent provisioning transaction
-└── infrastructure/persistence/
-    ├── SpringDataAccountRepository.java  # Spring Data implementation surface
-    └── JpaAccountRepositoryAdapter.java  # adapts Spring Data to the domain port
+└── repository/
+    ├── AccountRepository.java            # repository interface used by services
+    ├── AccountRepositoryImpl.java        # repository implementation
+    └── SpringDataAccountRepository.java  # Spring Data JPA interface
 
 src/main/resources/db/migration/
 └── V1__create_identity_and_profile_tables.sql
 ```
 
-Use one JPA-annotated account model rather than duplicating domain and persistence objects with identical fields. Retain a repository port and small adapter so application code does not depend directly on `JpaRepository`.
+Use one JPA-annotated account model rather than duplicating domain and persistence objects with identical fields. Retain a small repository interface and implementation so service code does not depend directly on `JpaRepository`.
 
 Provisioning alternatives:
 
@@ -70,34 +70,34 @@ Provisioning alternatives:
 
 ```text
 src/main/java/dev/dkutko/owlnest/profile/
-├── api/
+├── controller/
 │   ├── CurrentProfileController.java
 │   └── ProfileResponse.java
-├── application/
+├── service/
 │   ├── CurrentProfile.java
 │   └── GetOrCreateCurrentProfileService.java
 ├── domain/
-│   ├── Profile.java
-│   └── ProfileRepository.java
-└── infrastructure/persistence/
-    ├── SpringDataProfileRepository.java
-    └── JpaProfileRepositoryAdapter.java
+│   └── Profile.java
+└── repository/
+    ├── ProfileRepository.java
+    ├── ProfileRepositoryImpl.java
+    └── SpringDataProfileRepository.java
 
 src/test/java/dev/dkutko/owlnest/
 └── CurrentProfileControllerIntegrationTests.java
 ```
 
-The controller reads no raw token and contains no provisioning logic. It calls the application service and maps the returned profile to a response DTO. JPA entities are never serialized directly.
+The controller reads no raw token and contains no provisioning logic. It calls the service and maps the returned profile to a response DTO. JPA entities are never serialized directly.
 
 ### Stage 5: Error Contract and Integration Verification
 
 Planned only if Spring Security's standard error response is insufficient for the Flutter contract:
 
 ```text
-src/main/java/dev/dkutko/owlnest/shared/api/
+src/main/java/dev/dkutko/owlnest/shared/controller/
 └── ApiErrorResponse.java
 
-src/main/java/dev/dkutko/owlnest/identity/infrastructure/security/
+src/main/java/dev/dkutko/owlnest/identity/security/
 ├── RestAuthenticationEntryPoint.java     # missing/invalid token -> 401
 └── RestAccessDeniedHandler.java           # insufficient authority -> 403
 ```
@@ -106,7 +106,7 @@ Prefer the standard `WWW-Authenticate` behavior first. Add a custom JSON body on
 
 ## Dependency Use
 
-No application dependency change was required for this slice. The verified runtime graph already contains:
+No build dependency change was required for this slice. The verified runtime graph already contains:
 
 | Existing dependency | Current or intended use |
 | --- | --- |
@@ -123,7 +123,7 @@ No application dependency change was required for this slice. The verified runti
 Dependencies intentionally not added:
 
 - `spring-boot-starter-oauth2-client`: Flutter, not the backend, is the OAuth client.
-- Keycloak Java adapter: standard Spring Security OIDC/JWT support is sufficient and avoids provider coupling.
+- Keycloak-specific Java integration: standard Spring Security OIDC/JWT support is sufficient and avoids provider coupling.
 - Spring Authorization Server: Keycloak issues tokens.
 - Firebase Admin SDK: unrelated to the selected identity path; add later only for FCM.
 - Spring Modulith: useful for module verification later, but not required to implement authentication.
@@ -136,10 +136,10 @@ Each introduced annotation is recorded in `docs/annotations.md` and was explaine
 | --- | --- |
 | `@Configuration` | Security configuration source processed while the application context starts. |
 | `@Bean` | Registers `SecurityFilterChain` and any explicit converters/validators. |
-| `@Service` | Application use-case implementation discovered as a singleton Spring bean. |
+| `@Service` | Service/use-case implementation discovered as a singleton Spring bean. |
 | `@Transactional` | Defines account/profile provisioning as one database transaction. |
 | `@Entity`, `@Table`, `@Id`, `@Column` | Map account/profile Java state to the Flyway-created schema. |
-| `@Repository` | Marks persistence adapters and enables persistence exception translation. |
+| `@Repository` | Marks repository implementations and enables persistence exception translation. |
 | `@RestController`, `@RequestMapping`, `@GetMapping` | Expose the current-profile HTTP boundary. |
 
 Avoid redundant annotations. In particular, Spring Boot can configure web security from a `SecurityFilterChain` bean without adding annotations solely out of habit.
