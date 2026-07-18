@@ -188,9 +188,9 @@ http_request() {
     {
         echo 'silent'
         echo 'show-error'
-        echo 'location = false'
+        echo 'no-location'
         echo 'noproxy = "*"'
-        echo 'proto = "=http"'
+        echo 'proto = "-all,http"'
         echo 'connect-timeout = 5'
         echo 'max-time = 30'
         echo "request = \"$method\""
