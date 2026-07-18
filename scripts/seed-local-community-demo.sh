@@ -228,7 +228,7 @@ require_status() {
 }
 
 urlencode() {
-    jq -sRr @uri
+    jq -jRs @uri
 }
 
 write_form() {
