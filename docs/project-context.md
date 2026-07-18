@@ -2,16 +2,16 @@
 
 ## Product Vision
 
-OwlNest Backend supports a Flutter social-media application. The initial product is text-only and includes:
+OwlNest Backend supports a Flutter social-media application. The initial product includes:
 
 - registration, login, and user profiles;
-- text posts, comments, likes, reposts, and external sharing;
+- posts with optional ordered image/video references, likes, reposts, bookmarks, and a planned comments slice;
 - friendships and one-way follows;
 - a chronological feed;
 - later, persisted text messaging with live WebSocket delivery;
 - later, Firebase Cloud Messaging push notifications.
 
-The first versions remain text-only. A later media slice will add user avatars and post images backed by Cloudflare R2 object storage. Recommendation algorithms, microservices, and message brokers remain outside the initial scope unless a concrete requirement justifies them.
+The post contract can already persist untrusted absolute HTTPS image/video references for Flutter rendering. OwlNest does not upload, fetch, proxy, or inspect those URLs yet; a later media-storage slice may add user avatars and managed post media backed by Cloudflare R2. Recommendation algorithms, microservices, and message brokers remain outside the initial scope unless a concrete requirement justifies them.
 
 ## Architectural Preference
 

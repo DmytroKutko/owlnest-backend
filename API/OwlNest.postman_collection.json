@@ -17,6 +17,14 @@
     {
       "key": "refreshToken",
       "value": ""
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    },
+    {
+      "key": "postId",
+      "value": ""
     }
   ],
   "event": [
@@ -32,8 +40,20 @@
           "  'Create Test User': ['keycloakUrl', 'realm', 'adminAccessToken', 'email', 'password', 'firstName', 'lastName'],",
           "  'Development Email-Password Login': ['keycloakUrl', 'realm', 'clientId', 'email', 'password'],",
           "  'Refresh Access Token': ['keycloakUrl', 'realm', 'clientId', 'refreshToken'],",
-          "  'Complete Profile Onboarding': ['baseUrl', 'accessToken'],",
-          "  'Get Current Profile': ['baseUrl', 'accessToken']",
+          "  'Complete or Replace Current Profile': ['baseUrl', 'accessToken'],",
+          "  'Get Current Profile': ['baseUrl', 'accessToken'],",
+          "  'Heartbeat': ['baseUrl', 'accessToken'],",
+          "  'Get Public Profile': ['baseUrl', 'accessToken', 'accountId'],",
+          "  'Create Post': ['baseUrl', 'accessToken'],",
+          "  'Get Post': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Replace Post': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Delete Post': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Set Post Liked': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Clear Post Liked': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Set Post Bookmarked': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Clear Post Bookmarked': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Set Post Reposted': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Clear Post Reposted': ['baseUrl', 'accessToken', 'postId']",
           "};",
           "const required = requirementsByRequest[pm.info.requestName] || [];",
           "const missing = required.filter((key) => {",
@@ -275,7 +295,7 @@
       "name": "Profile",
       "item": [
         {
-          "name": "Complete Profile Onboarding",
+          "name": "Complete or Replace Current Profile",
           "request": {
             "method": "PUT",
             "header": [
@@ -298,6 +318,22 @@
         },
         {
           "name": "Get Current Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Current profile returned', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('accountId', pm.response.json().accountId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -308,6 +344,151 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/profile/me"
+          }
+        },
+        {
+          "name": "Get Public Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/profiles/{{accountId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "description": "Authenticated single-post CRUD and idempotent interactions. Run Create Post first; it saves postId. Comments remain a client-side same-post #comments hook.",
+      "item": [
+        {
+          "name": "Create Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Post created', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('postId', pm.response.json().id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"A quiet corner\",\n  \"description\": \"Found a place to slow down and breathe.\",\n  \"postType\": \"COMMUNITY\",\n  \"labels\": [\"Community Post\", \"Books\"],\n  \"media\": [\n    {\"type\": \"IMAGE\", \"url\": \"https://cdn.example.com/quiet-corner.jpg\"},\n    {\"type\": \"VIDEO\", \"url\": \"https://cdn.example.com/quiet-corner.mp4\"}\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/posts"
+          }
+        },
+        {
+          "name": "Get Post",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}"
+          }
+        },
+        {
+          "name": "Replace Post",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description-only post.\",\n  \"postType\": \"PERSONAL\",\n  \"labels\": [],\n  \"media\": []\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}"
+          }
+        },
+        {
+          "name": "Set Post Liked",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/likes"
+          }
+        },
+        {
+          "name": "Clear Post Liked",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/likes"
+          }
+        },
+        {
+          "name": "Set Post Bookmarked",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/bookmark"
+          }
+        },
+        {
+          "name": "Clear Post Bookmarked",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/bookmark"
+          }
+        },
+        {
+          "name": "Set Post Reposted",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/repost"
+          }
+        },
+        {
+          "name": "Clear Post Reposted",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/repost"
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Presence",
+      "item": [
+        {
+          "name": "Heartbeat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/presence/heartbeat"
           }
         }
       ]
