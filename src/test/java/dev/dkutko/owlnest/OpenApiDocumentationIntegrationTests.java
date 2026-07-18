@@ -186,6 +186,39 @@ class OpenApiDocumentationIntegrationTests {
     }
 
     @Test
+    void documentsAuthenticatedGlobalPostListContract() throws Exception {
+        mockMvc.perform(get("/v3/api-docs/rest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.operationId")
+                        .value("listGlobalPosts"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.security[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.security[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.responses['200']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/PostPageResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.responses['400']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.parameters[*].name")
+                        .value(containsInAnyOrder("limit", "cursor")))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.parameters"
+                                + "[?(@.name == 'limit')].schema.minimum")
+                        .value(org.hamcrest.Matchers.hasItem(1)))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.parameters"
+                                + "[?(@.name == 'limit')].schema.maximum")
+                        .value(org.hamcrest.Matchers.hasItem(100)))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].get.parameters"
+                                + "[?(@.name == 'limit')].schema.default")
+                        .value(org.hamcrest.Matchers.hasItem(20)))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/mine'].get").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/saved'].get").doesNotExist());
+    }
+
+    @Test
     void exposesPlannedWebSocketDocumentationGroup() throws Exception {
         mockMvc.perform(get("/v3/api-docs/websocket"))
                 .andExpect(status().isOk())

@@ -33,6 +33,12 @@ The Keycloak token endpoint exchanges an authorization code when logging in and 
 
 The documentation endpoints are intentionally unauthenticated, but Try it out calls still pass through the normal Spring Security filter chain. Before a public deployment, decide explicitly whether to keep the documentation public, protect it, or disable it.
 
+## Global Post List
+
+`GET /api/v1/posts` (`listGlobalPosts`) returns active posts to authenticated accounts in descending `(createdAt,id)` order. It accepts `limit` (`1..100`, default `20`) and an optional opaque cursor, and returns exact `PostResponse` cards inside `PostPageResponse {items,page,links}`.
+
+Pagination is live rather than snapshot-based. Root-relative `self` and `next` links carry the effective limit, terminal continuation fields are `null`, and responses use `Cache-Control: private, no-store`. Personalized, authored-only, and saved lists are not part of this endpoint.
+
 ## WebSocket Boundary
 
 No WebSocket endpoint, channel, or message is implemented yet. The second Swagger group is intentionally empty and marked `planned`; it must not contain invented HTTP operations.

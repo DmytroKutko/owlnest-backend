@@ -12,6 +12,13 @@ public interface PostCardQueryRepository {
 
     Optional<PostCardRow> findActiveById(UUID postId, UUID viewerAccountId);
 
+    List<PostCardRow> findGlobalActivePage(
+            UUID viewerAccountId,
+            Instant beforeCreatedAt,
+            UUID beforePostId,
+            int limit
+    );
+
     record PostCardRow(
             UUID id,
             UUID authorId,

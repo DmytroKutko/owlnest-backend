@@ -33,6 +33,10 @@
     {
       "key": "commentCursorQuery",
       "value": ""
+    },
+    {
+      "key": "globalPostCursorQuery",
+      "value": ""
     }
   ],
   "event": [
@@ -53,6 +57,7 @@
           "  'Heartbeat': ['baseUrl', 'accessToken'],",
           "  'Get Public Profile': ['baseUrl', 'accessToken', 'accountId'],",
           "  'Create Post': ['baseUrl', 'accessToken'],",
+          "  'List Global Posts': ['baseUrl', 'accessToken'],",
           "  'Get Post': ['baseUrl', 'accessToken', 'postId'],",
           "  'Replace Post': ['baseUrl', 'accessToken', 'postId'],",
           "  'Create Post Comment': ['baseUrl', 'accessToken', 'postId'],",
@@ -401,6 +406,29 @@
               "raw": "{\n  \"title\": \"A quiet corner\",\n  \"description\": \"Found a place to slow down and breathe.\",\n  \"postType\": \"COMMUNITY\",\n  \"labels\": [\"Community Post\", \"Books\"],\n  \"media\": [\n    {\"type\": \"IMAGE\", \"url\": \"https://cdn.example.com/quiet-corner.jpg\"},\n    {\"type\": \"VIDEO\", \"url\": \"https://cdn.example.com/quiet-corner.mp4\"}\n  ]\n}"
             },
             "url": "{{baseUrl}}/api/v1/posts"
+          }
+        },
+        {
+          "name": "List Global Posts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Global post page returned', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const cursor = pm.response.json().page.nextCursor;",
+                  "  pm.collectionVariables.set('globalPostCursorQuery', cursor ? `&cursor=${cursor}` : '');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts?limit=20{{globalPostCursorQuery}}"
           }
         },
         {

@@ -13,6 +13,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice(assignableTypes = {
         PostController.class,
+        PostListController.class,
         PostInteractionController.class,
         PostCommentController.class
 })

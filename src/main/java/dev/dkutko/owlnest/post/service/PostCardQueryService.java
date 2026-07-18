@@ -7,6 +7,10 @@ import dev.dkutko.owlnest.profile.service.ProfileSummary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -27,7 +31,21 @@ public class PostCardQueryService {
     public PostCard getById(UUID postId, UUID viewerAccountId) {
         PostCardRow row = postCardQueryRepository.findActiveById(postId, viewerAccountId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
-        ProfileSummary author = getProfileSummaryService.getByAccountId(row.authorId());
+        return toCards(List.of(row), viewerAccountId).getFirst();
+    }
+
+    List<PostCard> toCards(List<PostCardRow> rows, UUID viewerAccountId) {
+        Set<UUID> authorIds = new LinkedHashSet<>();
+        for (PostCardRow row : rows) {
+            authorIds.add(row.authorId());
+        }
+        Map<UUID, ProfileSummary> authors = getProfileSummaryService.getByAccountIds(authorIds);
+        return rows.stream()
+                .map(row -> toCard(row, authors.get(row.authorId()), viewerAccountId))
+                .toList();
+    }
+
+    private static PostCard toCard(PostCardRow row, ProfileSummary author, UUID viewerAccountId) {
         boolean isAuthor = row.authorId().equals(viewerAccountId);
         return new PostCard(
                 row.id(),
