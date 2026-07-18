@@ -32,7 +32,7 @@ Marks a class as a source of bean definitions. Spring reads it while building th
 
 ### `@Component`, `@Service`, and `@Repository`
 
-All three make a class discoverable during component scanning and normally create one singleton bean for the application context. `@Component` is the general form, `@Service` communicates an application use case, and `@Repository` identifies persistence adapters and enables translation of supported persistence exceptions. Constructor injection is preferred because required dependencies remain explicit and testable.
+All three make a class discoverable during component scanning and normally create one singleton bean for the application context. `@Component` is the general form, `@Service` marks service/use-case logic, and `@Repository` identifies repository implementations and enables translation of supported persistence exceptions. Constructor injection is preferred because required dependencies remain explicit and testable.
 
 ## Persistence and Transactions
 
@@ -46,29 +46,41 @@ Stores an enum by its constant name, such as `PREFER_NOT_TO_SAY`, instead of its
 
 ### `@Transactional`
 
-Spring wraps calls made through the managed service proxy in a database transaction. A successful call commits; an unchecked exception rolls it back by default. Use it on application operations that must be atomic, such as provisioning an account and profile. Calling a transactional method from another method on the same object bypasses the proxy and is a common pitfall.
+Spring wraps calls made through the managed service proxy in a database transaction. A successful call commits; an unchecked exception rolls it back by default. Use it on service operations that must be atomic, such as provisioning an account and profile. Calling a transactional method from another method on the same object bypasses the proxy and is a common pitfall. OwlNest keeps this annotation on service entry points, not repositories. Miss-only repository advisory-lock calls therefore participate in the existing service transaction and release at its commit/rollback; do not invoke those lock ports outside the owning transactional service, put them on established-user fast paths, or hold them across external calls.
+
+### `@Lock` and `@Param`
+
+Spring Data JPA processes `@Lock` on a repository query when the proxy executes it. `PESSIMISTIC_WRITE` asks Hibernate to acquire a database write lock for the selected active post row until the surrounding transaction completes, serializing replace/delete/interaction mutations. It must run inside a transaction; broad or inconsistent lock ordering can reduce throughput or deadlock. `@Param` binds the named method argument to the JPQL placeholder and is resolved for each repository invocation. PostgreSQL concurrency integration tests must cover the lock-dependent invariant instead of assuming the annotation is sufficient.
 
 ## HTTP API
 
-### `@RestController`, `@RequestMapping`, and `@GetMapping`
+### `@RestController`, `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@DeleteMapping`, and `@PathVariable`
 
-`@RestController` registers the class as an MVC controller whose return values are serialized into the HTTP response body. `@RequestMapping` defines the shared route prefix, while `@GetMapping` selects a GET route. Spring resolves these mappings during startup and invokes the matching method per request. Controllers should delegate business work to application services and return DTOs, not JPA entities.
+`@RestController` registers the class as an MVC controller whose return values are serialized into the HTTP response body. `@RequestMapping` defines the shared route prefix, while `@GetMapping`, `@PostMapping`, and `@DeleteMapping` select HTTP routes. `@PathVariable` converts a route segment such as `accountId` into the declared method-parameter type before invocation; an invalid UUID is rejected as a bad request. Spring resolves these mappings during startup and invokes the matching method per request. Controllers should delegate business work to services and return DTOs, not JPA entities.
+
+### `@ResponseStatus`
+
+Sets the successful HTTP status produced by a controller method when no `ResponseEntity` overrides it. Spring MVC applies it after `PresenceController.heartbeat()` returns and sends `204 No Content`. Keep it on controller methods or mapped exceptions, not services, because HTTP status is a transport concern.
 
 ### `@PutMapping`, `@RequestBody`, and `@Valid`
 
-`@PutMapping` selects the HTTP PUT operation used for a repeatable complete profile submission. `@RequestBody` deserializes request JSON into the request record. `@Valid` then invokes Jakarta Bean Validation before the controller method runs; invalid input returns `400` without entering the application service.
+`@PutMapping` selects the HTTP PUT operation used for a repeatable complete profile submission. `@RequestBody` deserializes request JSON into the request record. `@Valid` then invokes Jakarta Bean Validation before the controller method runs; invalid input returns `400` without entering the service.
 
-### `@NotBlank`, `@Size`, `@Pattern`, and `@Past`
+### `@NotBlank`, `@NotNull`, `@Size`, `@Pattern`, and `@Past`
 
-These Bean Validation constraints define input rules declaratively: required non-whitespace text, length limits, username character rules, and a birth date before today. They validate the API boundary; domain methods still protect essential non-null invariants when called outside HTTP.
+These Bean Validation constraints define input rules declaratively: required non-whitespace text, required nested values, length/cardinality limits, username character rules, and a birth date before today. They validate the API boundary; domain methods still protect essential invariants when called outside HTTP. Collection element constraints such as `List<@NotNull @Valid Media>` are evaluated for every submitted item.
+
+### `@JsonProperty`
+
+Jackson reads `@JsonProperty` while constructing serialization metadata. The post response uses it to keep the exact JSON field `isAuthor` for a Java record boolean component whose bean-style name could otherwise be interpreted differently by tooling. It affects JSON mapping, not authorization; permissions must already be derived in the service and verified through response/OpenAPI tests.
 
 ### `@RestControllerAdvice` and `@ExceptionHandler`
 
 `@RestControllerAdvice` registers centralized API exception mapping during startup. `@ExceptionHandler` selects a method when the declared exception escapes a controller. The profile handler converts a username conflict into a `409` Problem Details response without coupling the application exception to Spring MVC.
 
-### `@Tag`, `@Operation`, `@ApiResponses`, `@ApiResponse`, `@Content`, and `@Schema`
+### `@Tag`, `@Operation`, `@ApiResponses`, `@ApiResponse`, `@Content`, `@Schema`, `@ArraySchema`, and `@Header`
 
-These Swagger annotations enrich the OpenAPI contract generated by springdoc. `@Tag` groups related controller operations inside one API document, `@Operation` provides a stable operation ID and human-readable behavior, and response annotations declare observable HTTP outcomes. `@Content` describes a response media type while `@Schema` identifies its payload model; an empty `@Content` prevents springdoc from copying the success schema onto a response with no documented body. Springdoc reads them when generating `/v3/api-docs/*`; they do not change request handling. Keep them synchronized with controller behavior and integration tests, and avoid documenting responses the application cannot actually return.
+These Swagger annotations enrich the OpenAPI contract generated by springdoc. `@Tag` groups related controller operations inside one API document, `@Operation` provides a stable operation ID and human-readable behavior, and response annotations declare observable HTTP outcomes. `@Content` describes a response media type while `@Schema` identifies its payload model; `@ArraySchema` documents collection/item limits that are intentionally applied after normalization, and `@Header` describes the create response's runtime `Location` header. An empty `@Content` prevents springdoc from copying the success schema onto a response with no documented body. Springdoc reads these annotations when generating `/v3/api-docs/*`; they do not change request handling or validation. Keep them synchronized with controller behavior and integration tests, and avoid documenting responses the application cannot actually return.
 
 ### `@SecurityRequirement` and `@SecurityRequirements`
 
@@ -76,7 +88,7 @@ Declare which OpenAPI security schemes a documented operation accepts. OwlNest l
 
 ### `@ServiceConnection`
 
-Lets Spring Boot derive connection details from a Testcontainers object and override normal connection properties for the test context. Here it connects the application `DataSource` to PostgreSQL without hard-coded ports.
+Lets Spring Boot derive connection details from a Testcontainers object and override normal connection properties for the test context. It connects the application `DataSource` to PostgreSQL without hard-coded ports. The Redis test uses `name = "redis"` because Spring Boot cannot infer a service type from a generic container bean's declared return type; the hint selects Redis connection details. This annotation is processed only while the test application context starts and must not be used in production configuration.
 
 ### `@AutoConfigureMockMvc`
 

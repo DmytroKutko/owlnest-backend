@@ -8,7 +8,7 @@ Copy `.env.example` to `.env`, choose a local PostgreSQL password, and ensure Do
 
 ### IntelliJ development
 
-Select the shared `OwlNest Backend (Local)` run configuration. The backend runs as a local Java process for debugging, while Spring Boot automatically starts the PostgreSQL and Keycloak services from `compose.yaml`; the containerized backend remains excluded by its `full-stack` profile.
+Select the shared `OwlNest Backend (Local)` run configuration. The backend runs as a local Java process for debugging, while Spring Boot automatically starts the PostgreSQL, Redis, and Keycloak services from `compose.yaml`; the containerized backend remains excluded by its `full-stack` profile.
 
 The equivalent terminal command is:
 
@@ -25,7 +25,7 @@ Restart the complete local stack after source or configuration changes:
 ./setup.sh
 ```
 
-The script validates `.env` and Docker, stops the existing project containers, rebuilds the backend image, starts PostgreSQL, Keycloak, and the backend, waits for readiness, and prints their status. Named database and Keycloak volumes are preserved.
+The script validates `.env` and Docker, stops the existing project containers, rebuilds the backend image, starts PostgreSQL, Redis, Keycloak, and the backend, waits for readiness, and prints their status. Named database and Keycloak volumes are preserved.
 
 To start without forcing a complete restart:
 
@@ -39,7 +39,7 @@ Stop the stack without deleting database data:
 docker compose --profile full-stack down
 ```
 
-Docker Compose reads `.env`; Spring Boot then receives database connection details through its Docker Compose integration. Spring Boot does not automatically treat `.env` as an application configuration file. Application secrets must come from environment variables or an external secret manager, never committed `application*.yaml` files. PostgreSQL data is persisted in the named `postgres_data` volume.
+Docker Compose reads `.env`; Spring Boot then receives database and Redis connection details through its Docker Compose integration. Spring Boot does not automatically treat `.env` as an application configuration file. Application secrets must come from environment variables or an external secret manager, never committed `application*.yaml` files. PostgreSQL data is persisted in the named `postgres_data` volume. Redis presence is intentionally ephemeral and has no volume.
 
 Keycloak imports `docker/keycloak/owlnest-realm.json` only when the `owlnest` realm does not already exist. `./setup.sh` preserves `keycloak_data`, so changing the import file or bootstrap admin password does not overwrite existing Keycloak state. Apply deliberate Admin API changes or explicitly recreate the local volume when a clean realm import is required.
 
@@ -51,6 +51,8 @@ Swagger UI is available at `http://localhost:8080/swagger-ui.html`. Its top bar 
 
 ## Current Documents
 
+- [Codex Agent System](agent-system/README.md) — project-scoped root orchestration, 25 custom subagents, workflow gates, handoff contracts, repository evidence, and validation.
+- [Українська навчальна шпаргалка з архітектури](backend-architecture-cheat-sheet-uk.md) — проста карта поточних модулів, пакетів, класів, сховищ і потоків запитів зі схемами.
 - [Project Context](project-context.md) — product vision and collaboration rules.
 - [Architecture](architecture.md) — proposed modular architecture and delivery roadmap. Status: **Draft**.
 - [Annotation Glossary](annotations.md) — annotations currently present in the codebase.
@@ -59,6 +61,8 @@ Swagger UI is available at `http://localhost:8080/swagger-ui.html`. Its top bar 
 - [Authentication](features/authentication.md) — authentication contract, SMTP decision, and profile ownership boundaries.
 - [Authentication Implementation Plan](features/authentication-implementation-plan.md) — implemented files, dependencies, annotations, stages, and alternatives.
 - [Profile Onboarding](features/profile-onboarding.md) — browser registration boundary and authenticated product-profile contract.
+- [Profile and Online Presence Implementation Plan](features/profile-presence-implementation-plan.md) — public-profile privacy boundary, Redis heartbeat contract, dependencies, annotations, and verification.
+- [Дописи: реалізований single-post зріз](features/posts-architecture-plan.md) — фактичний CRUD/card contract, ordered labels/media, likes, bookmarks, reposts, consistency rules і відкладена comments/feed межа.
 - [ADR-0001](decisions/0001-feature-first-modular-monolith.md) — accepted feature-first modular-monolith structure.
 - [ADR-0002](decisions/0002-use-keycloak-as-identity-provider.md) — accepted Keycloak identity-provider decision.
 
