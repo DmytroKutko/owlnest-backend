@@ -285,7 +285,7 @@ class PostV3MigrationIntegrationTests {
             );
             assertConstraintViolation(
                     "ck_post_comment_count",
-                    () -> jdbcTemplate.update("UPDATE post SET comment_count = 1 WHERE id = ?", postId)
+                    () -> jdbcTemplate.update("UPDATE post SET comment_count = -1 WHERE id = ?", postId)
             );
             assertConstraintViolation(
                     "ck_post_repost_count",

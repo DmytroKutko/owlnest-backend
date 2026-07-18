@@ -1,8 +1,8 @@
-# Дописи: реалізований single-post зріз
+# Дописи: реалізований single-post і comments зріз
 
 **Статус:** Implemented — 2026-07-18.
 
-Цей документ описує фактичний контракт першого backend-зрізу дописів. Discovery feed, списки bookmarks/reposts, comments persistence і media upload залишаються окремими майбутніми фічами.
+Цей документ описує фактичний контракт backend-зрізу дописів і append-only коментарів. Discovery feed, списки bookmarks/reposts, comment edit/delete/replies/moderation і media upload залишаються окремими майбутніми фічами.
 
 ## Межа фічі
 
@@ -11,6 +11,7 @@ Feature package `post` володіє:
 - створенням, читанням, повною заміною та soft delete одного допису;
 - ordered labels та ordered media references;
 - idempotent desired-state взаємодіями like, private bookmark і repost;
+- створенням і oldest-first keyset pagination коментарів active post;
 - card projection з safe author summary, counters, viewer state, timestamps і клієнтськими links.
 
 Усі endpoints потребують bearer token. Усі active posts видимі будь-якому автентифікованому account незалежно від onboarding state. Лише автор може замінити або видалити active post. Missing і soft-deleted posts повертають `404 post.not_found`; чужі PUT/DELETE active post — `403 post.access_denied`.
@@ -23,15 +24,45 @@ Feature package `post` володіє:
 | `GET` | `/api/v1/posts/{id}` | `200`, card |
 | `PUT` | `/api/v1/posts/{id}` | `200`, повністю замінена card |
 | `DELETE` | `/api/v1/posts/{id}` | `204`, soft delete |
+| `POST` | `/api/v1/posts/{id}/comments` | `201`, comment і `Location` |
+| `GET` | `/api/v1/posts/{id}/comments` | `200`, oldest-first bounded page |
 | `PUT` / `DELETE` | `/api/v1/posts/{id}/likes` | `204`, like set/clear |
 | `PUT` / `DELETE` | `/api/v1/posts/{id}/bookmark` | `204`, private bookmark set/clear |
 | `PUT` / `DELETE` | `/api/v1/posts/{id}/repost` | `204`, repost set/clear |
 
 Repeated interaction requests є idempotent: relation і counter змінюються лише під час фактичного переходу стану. Self-like та self-repost дозволені. Bookmark не має публічного counter.
 
-Comments endpoint у цьому зрізі не реалізований. `links.comments` дорівнює `/api/v1/posts/{id}#comments`; Flutter використовує цей same-post hook, щоб відкрити секцію та composer. `counters.comments` поки завжди `0`.
+`links.comments` у post card і надалі дорівнює `/api/v1/posts/{id}#comments`: це Flutter same-post navigation hook, а не REST collection URL. REST collection має окремий шлях `/api/v1/posts/{id}/comments`, а `counters.comments` містить реальну кількість persisted comments.
 
-Feed/list/pagination, views endpoint, comment rows/endpoints, community membership, moderation і three-dot menu actions не входять у реалізований контракт.
+Feed/list posts, views endpoint, community membership, comment mutation/moderation і three-dot menu actions не входять у реалізований контракт.
+
+## Comments contract
+
+Create request містить тільки exact plain text:
+
+```json
+{"text": "Коментар без серверних полів у request"}
+```
+
+Текст required/nonblank, не містить `NUL` або unpaired UTF-16 surrogate і має максимум 5 000 Unicode code points. Backend не trim/normalize/перетворює валідний текст. `id`, `postId`, author і `createdAt` завжди server-owned. Будь-який authenticated account може коментувати active post; missing або soft-deleted post повертає `404 post.not_found`.
+
+Comment response містить `id`, `postId`, exact `text`, safe `author {accountId,nickname,displayName,avatarUrl}`, `createdAt` і `links {self,post,collection}`. Email, verification, birth date, gender, onboarding state та presence не експонуються.
+
+`GET /api/v1/posts/{id}/comments` приймає лише `limit` (default `20`, range `1..100`) та optional opaque `cursor`. Невідомі або повторені query parameters і malformed/post-mismatched cursor повертають `400 request.validation_failed`. Response має форму:
+
+```json
+{
+  "items": [],
+  "page": {"limit": 20, "hasMore": false, "nextCursor": null},
+  "links": {
+    "self": "/api/v1/posts/{id}/comments?limit=20",
+    "next": null,
+    "post": "/api/v1/posts/{id}"
+  }
+}
+```
+
+Порядок стабільний oldest-first за `(createdAt, id)`. Cursor має versioned `v1.` transport і прив'язаний до конкретного post. Це live keyset traversal, не snapshot. Comment POST навмисно не idempotent: кожен успішний request створює окремий comment; після неоднозначного network timeout клієнт не повинен автоматично повторювати його як desired-state PUT.
 
 ## Write contract
 
@@ -111,7 +142,11 @@ Flyway `V3__create_post_tables.sql` створює:
 - `post_label(post_id, position)` і `post_media(post_id, position)`;
 - `post_like(post_id, account_id)`, `post_bookmark(...)`, `post_repost(...)`.
 
+Forward-only `V4__create_post_comments.sql` додає append-only `post_comment`, foreign keys, text constraint, indexes `(post_id, created_at, id)` та `(author_id)`. Вона коротко замінює zero-only `post.comment_count` constraint на `>= 0 NOT VALID` без scan existing rows. Окрема `V5__validate_post_comment_count.sql` виконує validation у новій Flyway transaction/lock scope, щоб початковий сильний ALTER lock не утримувався під час scan.
+
 PostgreSQL є єдиним source of truth; Redis не використовується. `Post` — scalar JPA entity, ordered content та interaction rows обробляються bounded JDBC queries. Card scalars, labels і media читаються одним SQL statement, тому concurrent full replacement не створює змішаних версій. Усі existing-post mutations спочатку беруть `PESSIMISTIC_WRITE` lock active post row. Relation transition і like/repost counter delta виконуються в одній транзакції; composite primary keys є фінальним захистом від дублікатів.
+
+Comment creation використовує той самий active-post lock. Під lock PostgreSQL обирає strictly increasing per-post `createdAt`, comment row і `Post.recordCommentCreated()` commit/rollback в одній транзакції. Сторінка читається active-post-rooted bounded query та одним batch-safe profile query без unbounded association/N+1. Redis, events, outbox і notifications не входять у цей path.
 
 Перший account/profile provisioning використовує PostgreSQL transaction advisory locks лише після lookup miss, з обов'язковим recheck. Established users не беруть ці locks. Lock order: identity miss → profile miss → post row.
 
@@ -124,6 +159,9 @@ Soft delete не видаляє content/interactions фізично, але вс
 - CRUD, ownership, soft delete, authentication і stable Problem Details codes;
 - boundary/negative validation, ordered labels/media та safe server-owned projection;
 - viewer-specific state, interaction idempotency і counter consistency;
+- comment auth/privacy/text boundaries, exact preservation, active-post behavior і real card counter;
+- oldest-first cursor pagination, page isolation, malformed/foreign cursor rejection і bounded profile hydration;
+- concurrent comment creates, create/delete race, rollback, V4/V5 catalog/JPA parity і upgrade з pre-existing V3 rows;
 - generated OpenAPI operation IDs та відсутність неімплементованих routes;
 - PostgreSQL schema/constraints і concurrent interaction transitions.
 

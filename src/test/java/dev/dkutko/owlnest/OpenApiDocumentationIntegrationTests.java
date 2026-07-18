@@ -81,7 +81,6 @@ class OpenApiDocumentationIntegrationTests {
                         .value("setPostReposted"))
                 .andExpect(jsonPath("$.paths['/api/v1/posts/{id}/repost'].delete.operationId")
                         .value("clearPostReposted"))
-                .andExpect(jsonPath("$.paths['/api/v1/posts/{id}/comments']").doesNotExist())
                 .andExpect(jsonPath("$.paths['/api/v1/posts/{id}/views']").doesNotExist())
                 .andExpect(jsonPath("$.paths['/api/v1/feed/posts']").doesNotExist())
                 .andExpect(jsonPath("$.components.schemas.PostRequest.properties.title.type")
@@ -102,6 +101,88 @@ class OpenApiDocumentationIntegrationTests {
                 .andExpect(jsonPath("$.components.schemas.Media.properties.url.maxLength").value(2_048))
                 .andExpect(jsonPath("$.components.schemas.PostResponse.properties.description.minLength").value(1))
                 .andExpect(jsonPath("$.components.schemas..properties.isAuthor").exists());
+    }
+
+    @Test
+    void documentsExactPostCommentCreatePageSecurityAndAbsentMutationContract() throws Exception {
+        mockMvc.perform(get("/v3/api-docs/rest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.operationId")
+                        .value("createPostComment"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.operationId")
+                        .value("listPostComments"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.security"
+                                + "[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.security"
+                                + "[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.security"
+                                + "[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.security"
+                                + "[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.responses['201']"
+                                + ".headers.Location.schema.type")
+                        .value("string"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.responses['201']"
+                                + ".headers.Location.schema.format")
+                        .value("uri-reference"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.responses['201']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/PostCommentResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.responses['200']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/PostCommentPageResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.responses['400']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].post.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.responses['400']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.parameters"
+                                + "[?(@.name == 'limit')].schema.minimum")
+                        .value(org.hamcrest.Matchers.hasItem(1)))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.parameters"
+                                + "[?(@.name == 'limit')].schema.maximum")
+                        .value(org.hamcrest.Matchers.hasItem(100)))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments'].get.parameters"
+                                + "[?(@.name == 'limit')].schema.default")
+                        .value(org.hamcrest.Matchers.hasItem(20)))
+                .andExpect(jsonPath("$.components.schemas.PostCommentRequest.properties.text.minLength")
+                        .value(1))
+                .andExpect(jsonPath("$.components.schemas.PostCommentRequest.properties.text.maxLength")
+                        .value(5_000))
+                .andExpect(jsonPath("$.components.schemas.PostCommentResponse.properties.postId").exists())
+                .andExpect(jsonPath("$.components.schemas.PostCommentResponse.properties.links").exists())
+                .andExpect(jsonPath("$.components.schemas.PostCommentPageResponse.properties.items").exists())
+                .andExpect(jsonPath("$.components.schemas.PostCommentPageResponse.properties.page").exists())
+                .andExpect(jsonPath("$.components.schemas.PostCommentPageResponse.properties.links").exists())
+                .andExpect(jsonPath("$.components.schemas.PageMetadata.properties.nextCursor.type")
+                        .value(containsInAnyOrder("string", "null")))
+                .andExpect(jsonPath("$.components.schemas.PageMetadata.properties.nextCursor.nullable")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.components.schemas.PageLinks.properties.next.type")
+                        .value(containsInAnyOrder("string", "null")))
+                .andExpect(jsonPath("$.components.schemas.PageLinks.properties.next.nullable").doesNotExist())
+                .andExpect(jsonPath("$.components.schemas.CommentAuthor.properties.avatarUrl.type")
+                        .value(containsInAnyOrder("string", "null")))
+                .andExpect(jsonPath("$.components.schemas.CommentAuthor.properties.avatarUrl.nullable")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments/{commentId}']").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{postId}/comments/{commentId}/replies']")
+                        .doesNotExist());
     }
 
     @Test

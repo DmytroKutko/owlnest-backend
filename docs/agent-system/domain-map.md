@@ -76,15 +76,15 @@ Heartbeat flow provisions/refreshes the local account, then writes Redis. A writ
 
 ## Post module
 
-**Owns:** authenticated single-post lifecycle, ordered labels/media references, viewer interactions, public counters, and card assembly.
+**Owns:** authenticated single-post lifecycle, ordered labels/media references, append-only comments, viewer interactions, public counters, and card assembly.
 
 | Role | Types |
 | --- | --- |
-| HTTP | `PostController`, `PostInteractionController`, request/response records, `PostExceptionHandler` |
-| Services | CRUD services, `PostInteractionService`, `PostCardQueryService`, commands/results/exceptions |
-| Domain/JPA | scalar `Post`, `PostType`, `PostMedia`, `PostMediaType` |
-| Persistence | project ports/adapters plus package-private `SpringDataPostRepository` |
-| PostgreSQL | `post`, ordered content tables, and like/bookmark/repost relation tables from Flyway V3 |
+| HTTP | `PostController`, `PostCommentController`, `PostInteractionController`, request/response records, `PostExceptionHandler` |
+| Services | CRUD services, create/list comment services, cursor codec, `PostInteractionService`, `PostCardQueryService`, commands/results/exceptions |
+| Domain/JPA | scalar `Post`, append-only scalar `PostComment`, `PostType`, `PostMedia`, `PostMediaType` |
+| Persistence | project ports/adapters plus package-private Spring Data repositories and bounded JDBC projections |
+| PostgreSQL | post/content/interaction tables from Flyway V3, `post_comment` from V4, and final counter validation from V5 |
 
 ```text
 POST/GET/PUT/DELETE /api/v1/posts[/<id>]
@@ -97,9 +97,19 @@ PUT/DELETE /api/v1/posts/<id>/(likes|bookmark|repost)
   -> PostInteractionService
   -> active post row lock
   -> relation transition + conditional counter delta in one transaction
+
+POST /api/v1/posts/<id>/comments
+  -> CreatePostCommentService
+  -> active post row lock
+  -> monotonic append + comment counter increment in one transaction
+
+GET /api/v1/posts/<id>/comments
+  -> ListPostCommentsService
+  -> bounded active-post keyset query
+  -> batch safe profile summaries
 ```
 
-`Post` is the only aggregate/JPA root. Labels/media and interaction memberships are bounded JDBC-managed rows, not exposed entities. PostgreSQL is authoritative; post code does not use Redis or external media clients. Comments are only a same-card `#comments` link with counter zero in this slice.
+`Post` owns its lifecycle and counters; `PostComment` is an independently paged scalar persistence root with only UUID foreign keys, not an unbounded JPA association. Labels/media and interaction memberships are bounded JDBC-managed rows, not exposed entities. PostgreSQL is authoritative; post code does not use Redis or external media clients. The card retains its Flutter `#comments` navigation hook while the REST comment collection uses `/comments`.
 
 ## Cross-module edges
 
@@ -111,4 +121,4 @@ PUT/DELETE /api/v1/posts/<id>/(likes|bookmark|repost)
 
 ## Not implemented
 
-Social graph, feed, comments persistence, managed media upload/storage, notification, messaging, WebSocket delivery, FCM, R2, queues, schedulers, and external HTTP clients have no production packages. Their documentation is roadmap material. Do not cite proposed types, tables, endpoints, or rules as repository facts.
+Social graph, post feed/list, comment edit/delete/replies/moderation, managed media upload/storage, notification, messaging, WebSocket delivery, FCM, R2, queues, schedulers, and external HTTP clients have no production packages. Their documentation is roadmap material. Do not cite proposed types, tables, endpoints, or rules as repository facts.

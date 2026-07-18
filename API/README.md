@@ -26,7 +26,7 @@ Recommended local order:
 8. `Presence / Heartbeat`
 9. `Profile / Get Public Profile`
 10. `Posts / Create Post`
-11. `Posts / Get Post`, optional interaction requests, then `Posts / Delete Post`
+11. `Posts / Get Post`, optional comment/interaction requests, then `Posts / Delete Post`
 
 Credentials remain only in `.env` and the ignored local Postman environment; they are not committed in the collection. A collection-level pre-request script checks the variables required by each request and reports a clear error if the environment or a generated token is missing.
 
@@ -46,9 +46,19 @@ The test-user JSON receives email, password, first name, and last name from the 
 - `Get Public Profile` returns only public profile fields and presence for `{{accountId}}`.
 - `Create Post` submits optional title, `PERSONAL`/`COMMUNITY` classification, ordered labels, and ordered image/video HTTPS references, then saves the returned `postId`.
 - `Get Post` returns the safe author card, public like/comment/repost counters, viewer-specific flags, absolute timestamps, and a same-post `#comments` client hook.
+- `Create Post Comment` appends exact plain text to an active post, saves `commentId`, and returns only the safe author projection.
+- `List Post Comments` returns an oldest-first page. It saves `page.nextCursor` into `commentCursorQuery`; rerun it to request the next page, or clear that collection variable to restart.
 - `Replace Post` fully replaces author-editable content; the sample intentionally demonstrates a description-only post.
 - Like, bookmark, and repost PUT/DELETE requests set or clear desired state idempotently. Bookmark is private and has no public counter.
-- `Delete Post` soft-deletes the current user's post; run it last. Comment endpoints, feed/list routes, and media upload are not implemented in this slice.
+- `Delete Post` soft-deletes the current user's post; run it last. Comment edit/delete/reply routes, post feed/list routes, and media upload are not implemented in this slice.
+
+To populate the complete local community demo after `./setup.sh`, set a strong `KEYCLOAK_SEED_USER_PASSWORD` in `.env` and run:
+
+```shell
+OWLNEST_LOCAL_SEED=true ./scripts/seed-local-community-demo.sh
+```
+
+The ignored owner-only inventory makes the versioned seed resumable. The script operates only against the fixed localhost backend/Keycloak realm, creates or reuses six marked fictional `@owlnest.com` identities, and reconciles 36 community posts, 24 likes, and 18 comments. It never stores credentials in Git, adopts unmarked Keycloak accounts, writes product rows directly, deletes unrelated local data, or treats a duplicate match as safe.
 
 Post media URLs are untrusted metadata: the backend does not download or proxy them. A client fetching them must not attach the OwlNest bearer token to the media host.
 

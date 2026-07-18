@@ -13,6 +13,8 @@ Never replace PostgreSQL behavior with H2 tests. Never let Hibernate create/upda
 | `V1__create_identity_and_profile_tables.sql` | `identity_account`, `profile`, identity uniqueness, email index, FK, case-insensitive username unique index |
 | `V2__add_profile_onboarding_fields.sql` | `birth_date`, `gender`, `onboarding_completed`, gender check constraint |
 | `V3__create_post_tables.sql` | `post`, ordered label/media rows, like/bookmark/repost memberships, counters, constraints, indexes, and local-account foreign keys |
+| `V4__create_post_comments.sql` | append-only `post_comment`, chronological/author indexes, local-account/post FKs, text constraint, and forward relaxation of the post comment counter check |
+| `V5__validate_post_comment_count.sql` | validation of the nonnegative post comment counter check in a separate transaction/lock scope |
 
 Migration names use `V<integer>__<snake_case_description>.sql`. Inspect the directory immediately before selecting the next version. Applied shared migrations are immutable; correct them with a new forward migration.
 
@@ -28,13 +30,15 @@ Migration names use `V<integer>__<snake_case_description>.sql`. Inspect the dire
 
 ## JPA style
 
-`Account` and `Profile` are JPA-annotated domain entities with field access, protected no-arg constructors, private full constructors, static factories, and behavior methods. Services do not use `JpaRepository` directly. A feature repository interface exposes use-case operations; a `@Repository` adapter delegates to a package-private Spring Data interface.
+`Account`, `Profile`, `Post`, and `PostComment` are JPA-annotated domain entities with field access, protected no-arg constructors, private full constructors, static factories, and behavior methods. Services do not use `JpaRepository` directly. A feature repository interface exposes use-case operations; a `@Repository` adapter delegates to a package-private Spring Data interface. Unbounded comments are not mapped as a `Post` collection: they keep scalar UUID foreign keys and use a bounded JDBC keyset query.
 
 Match every mapping to Flyway: table/column names, SQL/Java types, length, nullability, uniqueness, enums, keys, and cascades. Do not expose entities from controllers. Review lazy/eager relationships, cascade, orphan removal, equality/hash code, batching, projections, and N+1 before adding associations. The current model uses no JPA relationships or `@Version`.
 
 ## Transaction and concurrency gate
 
 Place normal transaction boundaries on public service use-case methods invoked through Spring proxies. Document propagation, rollback exceptions, isolation/locking, retry/idempotency, and external/store effects. Use database constraints for concurrency invariants; do not rely solely on check-then-write.
+
+Existing post mutations and comment creation share the active-post pessimistic write lock. Under it, comment creation derives a strictly increasing per-post PostgreSQL timestamp, inserts the row, and increments the managed `Post.commentCount` in one transaction. V4 swaps the old zero-only constraint for a nonnegative `NOT VALID` constraint without an existing-row scan; V5 validates it in a separate transaction so the initial strong ALTER lock is released first. Neither migration rewrites V3.
 
 For schema changes, model query patterns before indexes. Analyze production row count, lock/table rewrite, default/backfill, nullability staging, concurrent index creation, old/new application coexistence, and forward-fix/data-loss behavior. Mark unknown production volumes `NEEDS_CONFIRMATION`.
 

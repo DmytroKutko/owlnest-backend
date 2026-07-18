@@ -119,6 +119,14 @@ public class Post {
         this.updatedAt = deletionTime;
     }
 
+    public void recordCommentCreated() {
+        try {
+            this.commentCount = Math.incrementExact(this.commentCount);
+        } catch (ArithmeticException exception) {
+            throw new IllegalStateException("Post comment counter cannot be incremented", exception);
+        }
+    }
+
     private static String normalizeTitle(String title) {
         if (title == null) {
             return null;

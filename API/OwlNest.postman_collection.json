@@ -25,6 +25,14 @@
     {
       "key": "postId",
       "value": ""
+    },
+    {
+      "key": "commentId",
+      "value": ""
+    },
+    {
+      "key": "commentCursorQuery",
+      "value": ""
     }
   ],
   "event": [
@@ -47,6 +55,8 @@
           "  'Create Post': ['baseUrl', 'accessToken'],",
           "  'Get Post': ['baseUrl', 'accessToken', 'postId'],",
           "  'Replace Post': ['baseUrl', 'accessToken', 'postId'],",
+          "  'Create Post Comment': ['baseUrl', 'accessToken', 'postId'],",
+          "  'List Post Comments': ['baseUrl', 'accessToken', 'postId'],",
           "  'Delete Post': ['baseUrl', 'accessToken', 'postId'],",
           "  'Set Post Liked': ['baseUrl', 'accessToken', 'postId'],",
           "  'Clear Post Liked': ['baseUrl', 'accessToken', 'postId'],",
@@ -364,7 +374,7 @@
     },
     {
       "name": "Posts",
-      "description": "Authenticated single-post CRUD and idempotent interactions. Run Create Post first; it saves postId. Comments remain a client-side same-post #comments hook.",
+      "description": "Authenticated single-post CRUD, chronological comments, and idempotent interactions. Run Create Post first; it saves postId.",
       "item": [
         {
           "name": "Create Post",
@@ -414,6 +424,56 @@
               "raw": "{\n  \"description\": \"Updated description-only post.\",\n  \"postType\": \"PERSONAL\",\n  \"labels\": [],\n  \"media\": []\n}"
             },
             "url": "{{baseUrl}}/api/v1/posts/{{postId}}"
+          }
+        },
+        {
+          "name": "Create Post Comment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Comment created', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('commentId', pm.response.json().id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"A thoughtful comment on this post.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/comments"
+          }
+        },
+        {
+          "name": "List Post Comments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Comment page returned', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const cursor = pm.response.json().page.nextCursor;",
+                  "  pm.collectionVariables.set('commentCursorQuery', cursor ? `&cursor=${cursor}` : '');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{accessToken}}", "type": "text"}],
+            "url": "{{baseUrl}}/api/v1/posts/{{postId}}/comments?limit=20{{commentCursorQuery}}"
           }
         },
         {

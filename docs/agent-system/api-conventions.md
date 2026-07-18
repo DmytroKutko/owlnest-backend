@@ -8,7 +8,7 @@
 - HTTP requests map to request records. Convert them into service commands when normalization or boundary separation adds value.
 - Never deserialize directly into or serialize a JPA entity.
 
-Current operation IDs are `getCurrentProfile`, `completeProfileOnboarding`, `getPublicProfile`, `heartbeatPresence`, `createPost`, `getPost`, `replacePost`, `deletePost`, `setPostLiked`, `clearPostLiked`, `setPostBookmarked`, `clearPostBookmarked`, `setPostReposted`, and `clearPostReposted`. New IDs must be stable and unique.
+Current operation IDs are `getCurrentProfile`, `completeProfileOnboarding`, `getPublicProfile`, `heartbeatPresence`, `createPost`, `getPost`, `replacePost`, `deletePost`, `createPostComment`, `listPostComments`, `setPostLiked`, `clearPostLiked`, `setPostBookmarked`, `clearPostBookmarked`, `setPostReposted`, and `clearPostReposted`. New IDs must be stable and unique.
 
 ## Validation and normalization
 
@@ -32,7 +32,7 @@ Current feature codes:
 
 Missing/malformed bearer tokens use Spring Security's standard 401 and `WWW-Authenticate` behavior; do not document a JSON error body that does not exist. Profile/presence invalid DTO input uses framework validation behavior. The post feature deliberately maps validation and malformed post identifiers to Problem Details code `request.validation_failed`; any cross-feature validation format still requires a separate contract decision.
 
-For pagination, filtering, sorting, cursor versioning, ETag, and generic request idempotency, no generic implemented convention exists. Define them per approved feature and mark reuse only after implementation. The implemented desired-state post interaction routes are idempotent, but Draft feed behavior is not current API policy.
+The implemented comment collection establishes one narrow pagination reference: only `limit` (default 20, range 1..100) and an opaque post-bound `v1.` cursor are accepted; repeated/unknown parameters fail with `request.validation_failed`; results use `(createdAt,id)` oldest-first keyset traversal and nested `page`/`links` metadata. It is live traversal, not a stable snapshot. Do not generalize it automatically to feeds or alternate sorting/filtering. ETag and generic request idempotency still have no implemented convention. Desired-state post interaction routes are idempotent, while every successful comment POST creates a distinct row.
 
 ## Authorization and privacy
 

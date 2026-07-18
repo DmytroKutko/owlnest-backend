@@ -9,7 +9,7 @@ Use for tables, columns, constraints, indexes, queries, JPA mappings, locking, o
 
 ## Baseline
 
-PostgreSQL 18 is the only test/runtime relational database. Flyway SQL files live in `src/main/resources/db/migration` and use `V<integer>__<snake_case_description>.sql`. Existing `V1` creates `identity_account` and `profile`; `V2` adds onboarding fields; `V3` creates the implemented single-post tables and interaction counters. Do not edit an already applied shared migration—add the next version after inspecting the directory immediately before writing.
+PostgreSQL 18 is the only test/runtime relational database. Flyway SQL files live in `src/main/resources/db/migration` and use `V<integer>__<snake_case_description>.sql`. Existing `V1` creates `identity_account` and `profile`; `V2` adds onboarding fields; `V3` creates the implemented single-post tables and interaction counters; `V4` adds append-only post comments and swaps the stored counter check to nonnegative `NOT VALID`; `V5` validates that check in a separate transaction/lock scope. Do not edit an already applied shared migration—add the next version after inspecting the directory immediately before writing.
 
 Durable identifiers are UUID. Timestamps are `Instant`/`TIMESTAMPTZ` in UTC. Use PostgreSQL types, named constraints/indexes, explicit nullability, and deliberate FK deletion behavior. `identity_account(provider, external_subject)` and case-insensitive profile username uniqueness are database-enforced. PostgreSQL is the source of truth.
 

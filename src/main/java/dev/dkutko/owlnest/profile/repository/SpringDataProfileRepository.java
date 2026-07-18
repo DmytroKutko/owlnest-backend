@@ -5,7 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 interface SpringDataProfileRepository extends JpaRepository<Profile, UUID> {
@@ -20,6 +22,15 @@ interface SpringDataProfileRepository extends JpaRepository<Profile, UUID> {
             WHERE profile.accountId = :accountId
             """)
     Optional<ProfileSummaryView> findSummaryByAccountId(@Param("accountId") UUID accountId);
+
+    @Query("""
+            SELECT profile.accountId AS accountId,
+                   profile.username AS nickname,
+                   profile.displayName AS displayName
+            FROM Profile profile
+            WHERE profile.accountId IN :accountIds
+            """)
+    List<ProfileSummaryView> findSummariesByAccountIds(@Param("accountIds") Set<UUID> accountIds);
 
     interface ProfileSummaryView {
 

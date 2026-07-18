@@ -11,7 +11,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-@RestControllerAdvice(assignableTypes = {PostController.class, PostInteractionController.class})
+@RestControllerAdvice(assignableTypes = {
+        PostController.class,
+        PostInteractionController.class,
+        PostCommentController.class
+})
 public class PostExceptionHandler {
 
     @ExceptionHandler(PostNotFoundException.class)

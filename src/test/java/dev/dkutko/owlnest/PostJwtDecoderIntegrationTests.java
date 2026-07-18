@@ -26,6 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -71,7 +72,7 @@ class PostJwtDecoderIntegrationTests {
     }
 
     @Test
-    void acceptsValidSignedTokenThroughProductionDecoderAndReachesPostController() throws Exception {
+    void acceptsValidSignedTokenThroughProductionDecoderAndReachesPostAndCommentControllers() throws Exception {
         String subject = "valid-decoder-subject-" + UUID.randomUUID();
         String token = JWT_FIXTURE.token(new TokenClaims(
                 subject,
@@ -86,10 +87,20 @@ class PostJwtDecoderIntegrationTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("post.not_found"));
 
-        mockMvc.perform(post("/api/v1/posts")
+        MvcResult postResult = mockMvc.perform(post("/api/v1/posts")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\":\"Decoder validation\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String postLocation = postResult.getResponse().getHeader(HttpHeaders.LOCATION);
+        assertThat(postLocation).isNotBlank();
+        UUID postId = UUID.fromString(postLocation.substring(postLocation.lastIndexOf('/') + 1));
+
+        mockMvc.perform(post("/api/v1/posts/{postId}/comments", postId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"Comment decoder validation\"}"))
                 .andExpect(status().isCreated());
 
         assertThat(accountCount(subject)).isEqualTo(1);
@@ -98,7 +109,7 @@ class PostJwtDecoderIntegrationTests {
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidTokens")
     void rejectsInvalidTokenBeforeProvisioning(String scenario, String subject, String token) throws Exception {
-        mockMvc.perform(get("/api/v1/posts/{id}", UUID.randomUUID())
+        mockMvc.perform(get("/api/v1/posts/{postId}/comments", UUID.randomUUID())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized());
 

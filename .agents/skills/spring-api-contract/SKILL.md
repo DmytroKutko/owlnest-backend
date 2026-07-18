@@ -15,7 +15,7 @@ Use whenever an HTTP path, method, payload, status, validation rule, security re
 - Swagger annotations provide stable `operationId`, summary, response codes, and alternative `keycloakOAuth2`/`bearerAuth` requirements.
 - Feature errors use RFC 9457-style Spring `ProblemDetail` with a stable `code` property. Current codes include `profile.username_conflict`, `profile.not_found`, `presence.unavailable`, `post.not_found`, `post.access_denied`, and `request.validation_failed`.
 - Missing/invalid bearer tokens currently use Spring Security's standard `401`/`WWW-Authenticate` response with no custom JSON body.
-- Current public APIs expose current/public profiles, presence heartbeat, single-post CRUD/card behavior, and desired-state like/bookmark/repost interactions. Public profile and post-author projections exclude email, verification, birth date, gender, and onboarding state. Feed/list and persisted comments remain separate capabilities until implemented.
+- Current public APIs expose current/public profiles, presence heartbeat, single-post CRUD/card behavior, append-only comment creation/oldest-first listing, and desired-state like/bookmark/repost interactions. Public profile, post-author, and comment-author projections exclude email, verification, birth date, gender, onboarding state, and presence. Post feed/list and comment mutation/moderation remain separate capabilities until implemented.
 - REST OpenAPI is `/v3/api-docs/rest`; keep the empty `WebSocket API (planned)` group. Future realtime channels use AsyncAPI, not fake REST operations.
 
 ## Contract package

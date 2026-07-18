@@ -22,7 +22,7 @@ OwlNest Backend is one Java application in one Gradle project. Feature packages 
 | Redis runtime/container | Spring Data Redis/Lettuce; Redis 7 Alpine | `build.gradle.kts`, `compose.yaml`, `TestcontainersConfiguration` |
 | Keycloak | 26.7.0 local container | `compose.yaml` |
 
-The shell may start Gradle under stale Java 11 even though Java 17 is installed. Gradle 9.5.1 requires a Java 17+ launcher and then resolves the declared Java 21 toolchain. A historical pre-bootstrap `./gradlew test --no-daemon` failure was caused by that launcher mismatch. For the current snapshot, the wrapper was started with the installed Java 17 launcher and the full 106-test PostgreSQL/Redis Testcontainers suite passed in 51 seconds.
+The shell may start Gradle under stale Java 11 even though Java 17 is installed. Gradle 9.5.1 requires a Java 17+ launcher and then resolves the declared Java 21 toolchain. A historical pre-bootstrap `./gradlew test --no-daemon` failure was caused by that launcher mismatch. For the current snapshot, the wrapper was started with the installed Java 17 launcher and the full 140-test PostgreSQL/Redis Testcontainers suite passed in 25 seconds.
 
 ## Architecture
 
@@ -33,10 +33,10 @@ Implemented feature roots:
 - `identity`: validated JWT mapping, local account provisioning, account persistence, and the HTTP security filter chain;
 - `profile`: private/current and public profile use cases, DTOs, validation, domain behavior, and PostgreSQL persistence;
 - `presence`: authenticated heartbeat and Redis-backed short-lived status;
-- `post`: authenticated single-post CRUD/card projection, ordered labels/media references, soft delete, and idempotent like/bookmark/repost interactions;
+- `post`: authenticated single-post CRUD/card projection, ordered labels/media references, append-only chronological comments, soft delete, and idempotent like/bookmark/repost interactions;
 - `foundation.openapi`: REST and planned-WebSocket OpenAPI groups.
 
-`feed`, `socialgraph`, managed media storage, comments persistence, `messaging`, and `notification` remain roadmap concepts. `docs/features/posts-architecture-plan.md` documents the implemented single-post slice and explicitly excludes feed/comments endpoints.
+`feed`, `socialgraph`, managed media storage, comment mutation/moderation, `messaging`, and `notification` remain roadmap concepts. `docs/features/posts-architecture-plan.md` documents the implemented single-post and comments slice and explicitly excludes post feed/list endpoints.
 
 Controllers delegate to service classes and return DTO records. Services orchestrate use cases and normally own transaction boundaries. Services depend on small project repository interfaces; `*RepositoryImpl` delegates to a package-private Spring Data interface. `Account` and `Profile` are both domain objects and JPA entities—an accepted pragmatic simplification rather than a separate persistence model.
 
@@ -46,7 +46,7 @@ Keycloak owns credentials, registration, verification, reset, tokens, and sessio
 
 `identity_account` uses a UUID primary key and a unique `(provider, external_subject)` mapping. `profile.account_id` is both primary key and `ON DELETE CASCADE` foreign key to the local account. Username uniqueness is enforced case-insensitively through `uq_profile_username_lower`. Profile onboarding adds optional birth date/gender and a non-null completion flag.
 
-Current domain behavior includes account creation/claim refresh, default profile creation, full profile onboarding/replacement, incomplete-profile hiding, safe public projections, presence status degradation, post CRUD/soft deletion, and idempotent post interactions. Feed and comments persistence remain future rules.
+Current domain behavior includes account creation/claim refresh, default profile creation, full profile onboarding/replacement, incomplete-profile hiding, safe public projections, presence status degradation, post CRUD/soft deletion, append-only active-post comments with a real counter, and idempotent post interactions. Feed and comment edit/delete/replies/moderation remain future rules.
 
 ## API conventions
 
@@ -62,6 +62,8 @@ Implemented business routes are:
 | GET | `/api/v1/posts/{id}` | `getPost` | PostgreSQL |
 | PUT | `/api/v1/posts/{id}` | `replacePost` | PostgreSQL |
 | DELETE | `/api/v1/posts/{id}` | `deletePost` | PostgreSQL |
+| POST | `/api/v1/posts/{id}/comments` | `createPostComment` | PostgreSQL |
+| GET | `/api/v1/posts/{id}/comments` | `listPostComments` | PostgreSQL |
 | PUT / DELETE | `/api/v1/posts/{id}/likes` | `setPostLiked` / `clearPostLiked` | PostgreSQL |
 | PUT / DELETE | `/api/v1/posts/{id}/bookmark` | `setPostBookmarked` / `clearPostBookmarked` | PostgreSQL |
 | PUT / DELETE | `/api/v1/posts/{id}/repost` | `setPostReposted` / `clearPostReposted` | PostgreSQL |
@@ -73,6 +75,8 @@ Spring MVC controllers use request/response records, Jakarta Bean Validation, Sw
 Flyway SQL in `src/main/resources/db/migration` is the schema source. Hibernate uses `ddl-auto: validate`; Open Session in View is disabled. Applied migrations are forward-only and must not be rewritten.
 
 `@Transactional` appears on public identity/profile/post use-case methods; read-only query services declare `readOnly = true` when they cannot provision state. Default Spring propagation lets account provisioning join an outer transaction when invoked through its separate bean proxy. Existing-post writes use a shared pessimistic post-row lock, while composite interaction keys and affected-row checks keep relation transitions and counters consistent.
+
+Comment creation joins provisioning, active-post lock, monotonic timestamp selection, append, and counter increment in one PostgreSQL transaction. Comment listing is an active-post-rooted bounded keyset query followed by one batch profile-summary query. PostgreSQL remains authoritative; Redis is not on either comment path.
 
 **NEEDS_CONFIRMATION:** `GetPublicProfileService.getByAccountId` calls `PresenceService`/Redis before the read-only PostgreSQL transaction returns. Future work should decide whether this external store read belongs outside the database transaction. The bootstrap does not alter behavior.
 
@@ -89,6 +93,8 @@ There are no cache annotations, Redis repositories, sessions, locks, rate limits
 `SecurityConfiguration` disables CSRF, form login, HTTP Basic, logout, request cache, and server sessions. Health, error, Swagger UI, and OpenAPI are public; `/api/v1/**` requires authentication; other routes are denied. JWT issuer, audience `owlnest-api`, and JWK URL are configured separately. Post replace/delete enforce local author ownership in their transactional services; no method-security roles or moderation roles exist yet.
 
 The local realm allows registration, keeps email verification disabled until SMTP exists, and defines bearer-only API plus public Flutter, Postman, and Swagger clients. Direct Access Grant exists only for the local Postman client.
+
+The optional `scripts/seed-local-community-demo.sh` is explicit-opt-in localhost tooling. It adopts only version-marked fictional `@owlnest.com` Keycloak users, sends all product writes through authenticated REST APIs, keeps credentials out of Git/process arguments, uses read-only PostgreSQL only for ambiguity reconciliation, and fails closed on duplicate ownership matches.
 
 ## Testing
 

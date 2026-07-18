@@ -5,7 +5,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -43,11 +45,17 @@ public class ProfileRepositoryImpl implements ProfileRepository {
     @Override
     public Optional<ProfileSummaryData> findSummaryByAccountId(UUID accountId) {
         return repository.findSummaryByAccountId(accountId)
-                .map(summary -> new ProfileSummaryData(
-                        summary.getAccountId(),
-                        summary.getNickname(),
-                        summary.getDisplayName()
-                ));
+                .map(ProfileRepositoryImpl::toSummaryData);
+    }
+
+    @Override
+    public List<ProfileSummaryData> findSummariesByAccountIds(Set<UUID> accountIds) {
+        if (accountIds.isEmpty()) {
+            return List.of();
+        }
+        return repository.findSummariesByAccountIds(accountIds).stream()
+                .map(ProfileRepositoryImpl::toSummaryData)
+                .toList();
     }
 
     @Override
@@ -58,6 +66,14 @@ public class ProfileRepositoryImpl implements ProfileRepository {
     @Override
     public Profile save(Profile profile) {
         return repository.save(profile);
+    }
+
+    private static ProfileSummaryData toSummaryData(SpringDataProfileRepository.ProfileSummaryView summary) {
+        return new ProfileSummaryData(
+                summary.getAccountId(),
+                summary.getNickname(),
+                summary.getDisplayName()
+        );
     }
 
 }

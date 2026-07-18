@@ -41,9 +41,26 @@ Best for: stable operation IDs, security schemes, REST group filtering, public d
 
 Evidence: `foundation/openapi/OpenApiConfiguration.java`, controller Swagger annotations, `OpenApiDocumentationIntegrationTests.java`, `docs/api-documentation.md`, and `API/OwlNest.postman_collection.json`.
 
+## Reference 5: append-only post comments
+
+Best for: an authenticated nested collection, exact Unicode preservation, server-owned author/timestamps, active-parent locking, denormalized counter consistency, oldest-first keyset cursors, bounded cross-feature safe-summary hydration, and forward constraint migration.
+
+Evidence path:
+
+```text
+PostCommentController
+  -> CreatePostCommentService / ListPostCommentsService
+  -> Post + PostComment
+  -> PostRepository + PostCommentRepository
+  -> GetProfileSummaryService batch safe projection
+  -> Flyway V4/V5
+```
+
+Use this narrowly. Normal comment POST is append-only and non-idempotent; desired-state interaction PUT is a different contract. The `v1.` cursor is post-bound and oldest-first, not a generic feed pagination policy. There is no comment edit/delete/reply/moderation behavior, Redis path, event, or notification.
+
 ## Draft-only material
 
 - `docs/architecture.md` contains accepted direction plus future Draft roadmap.
-- `docs/features/posts-architecture-plan.md` is the implemented source for the single-post CRUD/card and like/bookmark/repost slice.
+- `docs/features/posts-architecture-plan.md` is the implemented source for the single-post CRUD/card, comments, and like/bookmark/repost slice.
 
-Treat only the implemented post package, Flyway V3, generated OpenAPI, tests, and that feature document as current post evidence. Feed, cursor pagination, comments persistence, managed media upload, views, and list endpoints still require fresh business and technical gates; do not infer them from older Draft discussions.
+Treat only the implemented post package, Flyway V3–V5, generated OpenAPI, tests, and that feature document as current post evidence. Feed/post-list pagination, managed media upload, views, and comment mutation/moderation still require fresh business and technical gates; do not infer them from older Draft discussions.
