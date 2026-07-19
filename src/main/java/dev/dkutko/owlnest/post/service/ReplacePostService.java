@@ -1,5 +1,6 @@
 package dev.dkutko.owlnest.post.service;
 
+import dev.dkutko.owlnest.media.service.PostImageMediaLifecycleService;
 import dev.dkutko.owlnest.post.domain.Post;
 import dev.dkutko.owlnest.post.repository.PostContentRepository;
 import dev.dkutko.owlnest.post.repository.PostRepository;
@@ -18,17 +19,20 @@ public class ReplacePostService {
     private final PostRepository postRepository;
     private final PostContentRepository postContentRepository;
     private final PostCardQueryService postCardQueryService;
+    private final PostImageMediaLifecycleService mediaLifecycleService;
 
     public ReplacePostService(
             GetOrCreateCurrentProfileService currentProfileService,
             PostRepository postRepository,
             PostContentRepository postContentRepository,
-            PostCardQueryService postCardQueryService
+            PostCardQueryService postCardQueryService,
+            PostImageMediaLifecycleService mediaLifecycleService
     ) {
         this.currentProfileService = currentProfileService;
         this.postRepository = postRepository;
         this.postContentRepository = postContentRepository;
         this.postCardQueryService = postCardQueryService;
+        this.mediaLifecycleService = mediaLifecycleService;
     }
 
     @Transactional
@@ -37,8 +41,15 @@ public class ReplacePostService {
         Post post = postRepository.findActiveByIdForUpdate(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
         verifyOwnership(post, actor.accountId());
-        post.replace(command.postType(), command.title(), command.description(), Instant.now());
+        Instant now = Instant.now();
+        post.replace(command.title(), command.description(), now);
         postRepository.save(post);
+        mediaLifecycleService.replace(
+                actor.accountId(),
+                postContentRepository.findManagedMediaIds(postId),
+                command.managedMediaIds(),
+                now
+        );
         postContentRepository.replace(postId, command.labels(), command.media());
         return postCardQueryService.getById(postId, actor.accountId());
     }

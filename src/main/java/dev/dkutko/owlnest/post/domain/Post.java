@@ -102,12 +102,10 @@ public class Post {
         );
     }
 
-    public void replace(PostType postType, String title, String description, Instant now) {
-        PostType replacementType = Objects.requireNonNull(postType, "postType must not be null");
+    public void replace(String title, String description, Instant now) {
         String replacementTitle = normalizeTitle(title);
         String replacementDescription = validateDescription(description);
         Instant replacementTime = Objects.requireNonNull(now, "now must not be null");
-        this.postType = replacementType;
         this.title = replacementTitle;
         this.description = replacementDescription;
         this.updatedAt = replacementTime;

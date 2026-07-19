@@ -2,7 +2,7 @@
 
 **Статус:** Implemented — 2026-07-18.
 
-Цей документ описує фактичний контракт backend-зрізу дописів, authenticated global list і append-only коментарів. Personalized/saved lists, comment edit/delete/replies/moderation і media upload залишаються окремими майбутніми фічами.
+Цей документ описує фактичний контракт backend-зрізу дописів, authenticated global list, managed post images і append-only коментарів. Personalized/saved lists, comment edit/delete/replies/moderation, managed video та messenger media залишаються окремими майбутніми фічами.
 
 ## Межа фічі
 
@@ -78,10 +78,10 @@ Comment response містить `id`, `postId`, exact `text`, safe `author {acco
 {
   "title": "Необов'язковий заголовок",
   "description": "Обов'язковий текст допису",
-  "postType": "COMMUNITY",
   "labels": ["Community Post", "Spring"],
   "media": [
     {"type": "IMAGE", "url": "https://cdn.example.com/photo.jpg"},
+    {"type": "IMAGE", "mediaId": "47c62a2c-ae5f-48d1-b05c-126cc1292392"},
     {"type": "VIDEO", "url": "https://cdn.example.com/video.mp4"}
   ]
 }
@@ -91,10 +91,11 @@ Comment response містить `id`, `postId`, exact `text`, safe `author {acco
 
 - `title` optional, максимум 200 Unicode code points; blank нормалізується в `null`;
 - `description` required/nonblank, максимум 20 000 Unicode code points;
-- `postType`: `PERSONAL` або `COMMUNITY`, default `PERSONAL`;
-- `COMMUNITY` є presentation classification, а не доказом membership/affiliation;
+- `postType` не є write-полем: backend визначає `COMMUNITY`, якщо нормалізований email автора закінчується на `@owlnest.com`, інакше `PERSONAL`;
+- `COMMUNITY` є server-derived presentation classification, а не доказом membership/affiliation;
 - `labels`: 0–5, кожен trimmed і довжиною 1–50 Unicode code points, порядок і дублікати зберігаються;
-- `media`: 0–10 ordered елементів `IMAGE`/`VIDEO`;
+- `media`: 0–10 ordered елементів; кожен має рівно одне з `url` або `mediaId`;
+- managed `mediaId` дозволений лише для `IMAGE` і має посилатися на власний unexpired `READY` `POST_IMAGE`; missing/cross-owner повертає sanitized `404 media.not_found`, wrong purpose/not-ready — `409`;
 - media URL має бути синтаксично валідним absolute HTTPS URI до 2048 Unicode code points; валідні Unicode, IPv6 literal і user-info форми не канонізуються та зберігаються без зміни;
 - relative URI, не-HTTPS scheme, blank URL, malformed URI, `NUL` та unpaired UTF-16 surrogates повертають `400`;
 - `NUL` та unpaired UTF-16 surrogates у текстових полях не підтримуються; інші валідні interior control characters зберігаються без зміни;
@@ -102,7 +103,9 @@ Comment response містить `id`, `postId`, exact `text`, safe `author {acco
 - Flutter не повинен пересилати OwlNest bearer token на media host;
 - `id`, author, counters, viewer state, permissions і timestamps визначає сервер. Невідомі/server-owned JSON fields не можуть їх перевизначити.
 
-PUT є full replacement усіх author-editable полів. Omitted `postType`, labels або media стають відповідно `PERSONAL`, `[]`, `[]`.
+PUT є full replacement усіх author-editable полів. Omitted labels або media стають `[]`; server-derived `postType` не редагується та не перераховується при зміні email автора.
+
+Для compatibility legacy payload із `postType` обробляється як unknown field і ігнорується; його значення не може вплинути ані на створення, ані на заміну поста. Актуальні клієнти мають прибрати поле зі своїх request models.
 
 ## Card response
 
@@ -140,7 +143,9 @@ PUT є full replacement усіх author-editable полів. Omitted `postType`,
 }
 ```
 
-Backend повертає absolute `Instant`; elapsed-time formatting належить Flutter. Author projection навмисно виключає email, birth date, gender, onboarding state і presence. До explicit onboarding default author є privacy-neutral: generated `user_<id>` і `OwlNest user`; identity-provider name/email claims не стають публічними через post card. `avatarUrl` залишається nullable legacy полем, а managed avatar представлено окремим `{mediaId, deliveryUrl}` без прямого R2 URL. Post module отримує лише UUID через safe profile projection і не залежить від media repository або storage adapter.
+Backend повертає absolute `Instant`; elapsed-time formatting належить Flutter. Author projection навмисно виключає email, birth date, gender, onboarding state і presence. До explicit onboarding default author є privacy-neutral: generated `user_<id>` і `OwlNest user`; identity-provider name/email claims не стають публічними через post card. `avatarUrl` залишається nullable legacy полем, а managed avatar представлено окремим `{mediaId, deliveryUrl}` без прямого R2 URL. Write-path використовує email лише під час створення для класифікації та не зберігає його в post; read-path отримує лише UUID через safe profile projection. Post module не залежить від media repository або storage adapter.
+
+Managed post item повертається як `{"type":"IMAGE","url":null,"managed":{"mediaId":"...","deliveryUrl":"/api/v1/media/.../delivery"}}`. Flutter викликає delivery endpoint з OwlNest bearer token, а потім завантажує bytes за короткоживучим R2 GET URL без OwlNest token. Повний PUT зберігає вже attached active IDs, активує нові READY IDs і ставить від’єднані у delayed cleanup; soft delete поста також блокує delivery та від’єднує managed images.
 
 ## Дані й узгодженість
 
@@ -149,6 +154,10 @@ Flyway `V3__create_post_tables.sql` створює:
 - `post` — aggregate root, soft-delete marker і like/comment/repost counters;
 - `post_label(post_id, position)` і `post_media(post_id, position)`;
 - `post_like(post_id, account_id)`, `post_bookmark(...)`, `post_repost(...)`.
+
+Forward-only `V7__attach_managed_media_to_posts.sql` робить legacy URL nullable, додає generated `POST_IMAGE` purpose, composite FK, exactly-one-source/type checks і unique attachment. Вона не backfill-ить і не змінює existing HTTPS rows.
+
+V7 є stop-the-world transition, а не rolling-compatible schema: після першого managed-only row попередній binary не може безпечно читати або від’єднувати такий media item. Для local Compose потрібно спочатку прибрати старий backend instance, застосувати Flyway під час старту нового й лише тоді дозволяти writes. Перед застосуванням до великої `post_media` потрібні вимірювання rewrite/index/constraint duration, disk headroom і maintenance window; вже застосовану V7 не редагують — наступні зміни робляться тільки forward migration.
 
 Forward-only `V4__create_post_comments.sql` додає append-only `post_comment`, foreign keys, text constraint, indexes `(post_id, created_at, id)` та `(author_id)`. Вона коротко замінює zero-only `post.comment_count` constraint на `>= 0 NOT VALID` без scan existing rows. Окрема `V5__validate_post_comment_count.sql` виконує validation у новій Flyway transaction/lock scope, щоб початковий сильний ALTER lock не утримувався під час scan.
 

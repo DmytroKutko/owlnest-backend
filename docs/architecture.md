@@ -71,11 +71,11 @@ Friendship and follow relationships remain separate: follow is directional; frie
 
 ## Media Storage
 
-The implemented first managed-media slice supports private profile avatars in Cloudflare R2. PostgreSQL stores ownership, immutable declared and observed metadata, lifecycle state, cleanup leases, and the profile association; object bytes remain in a private bucket. The backend issues short-lived authenticated capabilities but does not proxy upload or download bodies.
+The implemented managed-media slices support private profile avatars and post images in Cloudflare R2. PostgreSQL stores ownership, immutable declared and observed metadata, lifecycle state, cleanup leases, and the profile/post associations; object bytes remain in a private bucket. The backend issues short-lived authenticated capabilities but does not proxy upload or download bodies.
 
-The direct-upload flow is reservation, presigned create-only `PUT`, R2 metadata confirmation, atomic avatar activation, and authenticated creation of a short-lived private `GET` capability. R2 access stays behind the media-owned `MediaObjectStorage` port. Profile code calls a public media lifecycle service and never reaches into media repositories. R2 calls run outside PostgreSQL transactions; a bounded scheduled cleanup uses database leases and retry backoff. The implemented contract and configuration live in [Managed Media and Cloudflare R2](features/managed-media-r2.md).
+The direct-upload flow is reservation, presigned create-only `PUT`, R2 metadata confirmation, atomic avatar or post-image activation, and authenticated creation of a short-lived private `GET` capability. R2 access stays behind the media-owned `MediaObjectStorage` port. Profile and post code call public media lifecycle services and never reach into media repositories. R2 calls run outside PostgreSQL transactions; a bounded scheduled cleanup uses database leases and retry backoff. The implemented contract and configuration live in [Managed Media and Cloudflare R2](features/managed-media-r2.md).
 
-The post feature still persists ordered, untrusted HTTPS image/video references without fetching them. Managed post attachment, processing, and migration of URL-backed post media remain deferred.
+The post feature preserves ordered, untrusted HTTPS image/video references without fetching them and additionally supports owned managed images. Managed post video, media processing, and migration/downloading of existing URL-backed post media remain deferred.
 
 ## Delivery Roadmap
 
@@ -85,7 +85,7 @@ The post feature still persists ordered, untrusted HTTPS image/video references 
 4. **Social graph:** follow/unfollow, friend request, accept/reject, list relationships.
 5. **Publishing:** create/read/delete text posts and comments with ownership rules.
 6. **Engagement and feed:** likes, reposts, chronological cursor-paginated feed.
-7. **Media:** Cloudflare R2 integration, avatar uploads, then post images and cleanup rules.
+7. **Media:** Cloudflare R2 integration, avatar and post-image uploads, then managed video only when required.
 8. **Notifications:** in-app notification records, then FCM device tokens and push delivery.
 9. **Messaging:** conversations and persisted text messages over REST, then WebSocket live delivery.
 

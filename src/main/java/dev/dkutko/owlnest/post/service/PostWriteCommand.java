@@ -3,12 +3,11 @@ package dev.dkutko.owlnest.post.service;
 import dev.dkutko.owlnest.post.domain.PostMedia;
 import dev.dkutko.owlnest.post.domain.PostTextNormalization;
 import dev.dkutko.owlnest.post.domain.PostTextValidation;
-import dev.dkutko.owlnest.post.domain.PostType;
 
 import java.util.List;
+import java.util.UUID;
 
 public record PostWriteCommand(
-        PostType postType,
         String title,
         String description,
         List<String> labels,
@@ -20,7 +19,6 @@ public record PostWriteCommand(
     private static final int MAX_MEDIA = 10;
 
     public PostWriteCommand {
-        postType = postType == null ? PostType.PERSONAL : postType;
         labels = normalizeLabels(labels);
         media = normalizeMedia(media);
     }
@@ -64,5 +62,12 @@ public record PostWriteCommand(
             throw new IllegalArgumentException("media must not contain null values");
         }
         return List.copyOf(media);
+    }
+
+    public List<UUID> managedMediaIds() {
+        return media.stream()
+                .map(PostMedia::managedMediaId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 }

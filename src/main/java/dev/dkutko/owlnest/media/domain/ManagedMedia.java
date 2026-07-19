@@ -258,6 +258,25 @@ public class ManagedMedia {
         updatedAt = activatedAt;
     }
 
+    public void activatePostImage(Instant activatedAt) {
+        Objects.requireNonNull(activatedAt, "activatedAt must not be null");
+        if (purpose != ManagedMediaPurpose.POST_IMAGE) {
+            throw new IllegalStateException("only post image media can be activated as a post image");
+        }
+        if (status != ManagedMediaStatus.READY || isReadyExpiredAt(activatedAt)) {
+            throw new IllegalStateException("media must be unexpired and ready before post activation");
+        }
+        status = ManagedMediaStatus.ACTIVE;
+        updatedAt = activatedAt;
+    }
+
+    public void detach(Instant requestedAt, Instant cleanupDueAt) {
+        if (status != ManagedMediaStatus.ACTIVE) {
+            throw new IllegalStateException("only active media can be detached");
+        }
+        transitionToDeletionPending(ManagedMediaDeletionReason.DETACHED, requestedAt, cleanupDueAt);
+    }
+
     public void supersede(Instant requestedAt, Instant cleanupDueAt) {
         if (status != ManagedMediaStatus.ACTIVE) {
             throw new IllegalStateException("only active media can be superseded");

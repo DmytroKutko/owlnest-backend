@@ -17,14 +17,43 @@ public class PostContentRepositoryImpl implements PostContentRepository {
             """;
 
     private static final String INSERT_MEDIA_SQL = """
-            INSERT INTO post_media (post_id, position, media_type, url)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO post_media (post_id, position, media_type, url, managed_media_id)
+            VALUES (?, ?, ?, ?, ?)
             """;
 
     private final JdbcTemplate jdbcTemplate;
 
     public PostContentRepositoryImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public List<UUID> findManagedMediaIds(UUID postId) {
+        return jdbcTemplate.queryForList(
+                "SELECT managed_media_id FROM post_media WHERE post_id = ? AND managed_media_id IS NOT NULL ORDER BY managed_media_id",
+                UUID.class,
+                postId
+        );
+    }
+
+    @Override
+    public boolean hasActivePostImageAssociation(UUID mediaId, UUID ownerAccountId) {
+        Boolean associated = jdbcTemplate.queryForObject(
+                """
+                        SELECT EXISTS (
+                            SELECT 1
+                            FROM post_media media
+                            JOIN post p ON p.id = media.post_id
+                            WHERE media.managed_media_id = ?
+                              AND p.author_id = ?
+                              AND p.deleted_at IS NULL
+                        )
+                        """,
+                Boolean.class,
+                mediaId,
+                ownerAccountId
+        );
+        return Boolean.TRUE.equals(associated);
     }
 
     @Override
@@ -44,7 +73,13 @@ public class PostContentRepositoryImpl implements PostContentRepository {
             List<Object[]> mediaArguments = new ArrayList<>(media.size());
             for (int position = 0; position < media.size(); position++) {
                 PostMedia item = media.get(position);
-                mediaArguments.add(new Object[]{postId, position, item.type().name(), item.url().toString()});
+                mediaArguments.add(new Object[]{
+                        postId,
+                        position,
+                        item.type().name(),
+                        item.url() == null ? null : item.url().toString(),
+                        item.managedMediaId()
+                });
             }
             jdbcTemplate.batchUpdate(INSERT_MEDIA_SQL, mediaArguments);
         }

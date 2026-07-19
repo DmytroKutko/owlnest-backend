@@ -51,14 +51,16 @@ class PostControllerIntegrationTests {
         UUID suppliedId = UUID.randomUUID();
 
         MvcResult result = mockMvc.perform(post("/api/v1/posts")
-                        .with(jwt().jwt(token -> token.subject(subject)))
+                        .with(jwt().jwt(token -> token
+                                .subject(subject)
+                                .claim("email", "post.creator@owlnest.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "id": "%s",
                                   "title": "A complete post",
                                   "description": "The persisted description",
-                                  "postType": "COMMUNITY",
+                                  "postType": "PERSONAL",
                                   "labels": ["  Spring  ", "PostgreSQL", "API"],
                                   "media": [
                                     {"type": "IMAGE", "url": "https://cdn.example.com/first.png"},
@@ -134,6 +136,7 @@ class PostControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\":\"Privacy-safe first post\"}"))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.postType").value("PERSONAL"))
                 .andExpect(jsonPath("$.author.nickname").value(org.hamcrest.Matchers.startsWith("user_")))
                 .andExpect(jsonPath("$.author.displayName").value("OwlNest user"))
                 .andExpect(jsonPath("$.author.email").doesNotExist())
@@ -158,11 +161,13 @@ class PostControllerIntegrationTests {
     }
 
     @Test
-    void defaultsPersonalPostAndNormalizesBlankTitle() throws Exception {
+    void derivesPersonalPostFromExternalEmailAndNormalizesBlankTitle() throws Exception {
         String subject = "post-default-owner";
 
         mockMvc.perform(post("/api/v1/posts")
-                        .with(jwt().jwt(token -> token.subject(subject)))
+                        .with(jwt().jwt(token -> token
+                                .subject(subject)
+                                .claim("email", "post.owner@gmail.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -548,17 +553,28 @@ class PostControllerIntegrationTests {
     }
 
     @Test
-    void fullyReplacesOwnedPost() throws Exception {
+    void fullyReplacesOwnedPostWithoutChangingEmailDerivedType() throws Exception {
         String owner = "post-replace-owner";
-        UUID postId = createPost(owner, "Original description");
+        MvcResult createResult = mockMvc.perform(post("/api/v1/posts")
+                        .with(jwt().jwt(token -> token
+                                .subject(owner)
+                                .claim("email", "post.replace@owlnest.com")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"Original description\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.postType").value("COMMUNITY"))
+                .andReturn();
+        UUID postId = postIdFromLocation(createResult.getResponse().getHeader(HttpHeaders.LOCATION));
 
         mockMvc.perform(put("/api/v1/posts/{id}", postId)
-                        .with(jwt().jwt(token -> token.subject(owner)))
+                        .with(jwt().jwt(token -> token
+                                .subject(owner)
+                                .claim("email", "post.replace@gmail.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "description": "Replacement description",
-                                  "postType": "COMMUNITY",
+                                  "postType": "PERSONAL",
                                   "labels": [" replacement "],
                                   "media": [{"type": "VIDEO", "url": "https://cdn.example.com/replacement.mp4"}]
                                 }
@@ -587,7 +603,6 @@ class PostControllerIntegrationTests {
                                 {
                                   "title": "Original title",
                                   "description": "Original description",
-                                  "postType": "COMMUNITY",
                                   "labels": ["original"],
                                   "media": [{"type":"IMAGE","url":"https://cdn.example.com/original.png"}]
                                 }
@@ -604,7 +619,6 @@ class PostControllerIntegrationTests {
                                     {
                                       "title": "Changed title",
                                       "description": "Changed description",
-                                      "postType": "PERSONAL",
                                       "labels": ["%s"],
                                       "media": []
                                     }
@@ -618,7 +632,7 @@ class PostControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Original title"))
                 .andExpect(jsonPath("$.description").value("Original description"))
-                .andExpect(jsonPath("$.postType").value("COMMUNITY"))
+                .andExpect(jsonPath("$.postType").value("PERSONAL"))
                 .andExpect(jsonPath("$.labels[0]").value("original"))
                 .andExpect(jsonPath("$.media[0].url").value("https://cdn.example.com/original.png"));
     }
@@ -642,7 +656,6 @@ class PostControllerIntegrationTests {
                                 {
                                   "title": "Original title",
                                   "description": "Original description",
-                                  "postType": "COMMUNITY",
                                   "labels": ["original"],
                                   "media": [{"type":"IMAGE","url":"https://cdn.example.com/original.png"}]
                                 }
@@ -679,7 +692,6 @@ class PostControllerIntegrationTests {
                                 {
                                   "title": "Duplicate labels",
                                   "description": "Created with ordered duplicate labels",
-                                  "postType": "COMMUNITY",
                                   "labels": [" Spring ", "spring", "Spring", "Spring"]
                                 }
                                 """))
@@ -831,7 +843,6 @@ class PostControllerIntegrationTests {
                 arguments("unpaired-low-label", "{\"description\":\"valid\",\"labels\":[\"before\\uDC00after\"]}"),
                 arguments("long-description", "{\"description\":\"" + "d".repeat(20_001) + "\"}"),
                 arguments("long-title", "{\"title\":\"" + "t".repeat(201) + "\",\"description\":\"valid\"}"),
-                arguments("unknown-post-type", "{\"description\":\"valid\",\"postType\":\"GROUP\"}"),
                 arguments("too-many-labels", "{\"description\":\"valid\",\"labels\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"]}"),
                 arguments("blank-label", "{\"description\":\"valid\",\"labels\":[\"   \"]}"),
                 arguments("control-only-label", "{\"description\":\"valid\",\"labels\":[\"\\u0000\\u001f\"]}"),
@@ -897,7 +908,7 @@ class PostControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Original title"))
                 .andExpect(jsonPath("$.description").value("Original description"))
-                .andExpect(jsonPath("$.postType").value("COMMUNITY"))
+                .andExpect(jsonPath("$.postType").value("PERSONAL"))
                 .andExpect(jsonPath("$.labels[0]").value("original"))
                 .andExpect(jsonPath("$.media[0].url").value("https://cdn.example.com/original.png"));
     }

@@ -218,7 +218,7 @@ public class MediaController {
     @Operation(
             operationId = "deliverManagedMedia",
             summary = "Create private media delivery access",
-            description = "Authorizes the current avatar association and returns a five-minute private R2 GET capability."
+            description = "Authorizes an active avatar or active-post image association and returns a five-minute private R2 GET capability."
     )
     @ApiResponses({
             @ApiResponse(

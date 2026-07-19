@@ -177,6 +177,9 @@ class MediaUploadControllerIntegrationTests {
         assertThat(storage.uploadRequests).singleElement().satisfies(request -> {
             assertThat(request.contentType()).isEqualTo(contentType);
             assertThat(request.contentLength()).isEqualTo(sizeBytes);
+            assertThat(request.objectKey()).startsWith(
+                    purpose.equals("AVATAR") ? "managed/v1/avatars/" : "managed/v1/posts/"
+            );
         });
     }
 
@@ -733,7 +736,10 @@ class MediaUploadControllerIntegrationTests {
         return Stream.of(
                 arguments("AVATAR", "image/jpeg", 1L),
                 arguments("AVATAR", "image/png", 10_485_760L),
-                arguments("AVATAR", "image/webp", 1L)
+                arguments("AVATAR", "image/webp", 1L),
+                arguments("POST_IMAGE", "image/jpeg", 1L),
+                arguments("POST_IMAGE", "image/png", 20_971_520L),
+                arguments("POST_IMAGE", "image/webp", 1L)
         );
     }
 
@@ -745,7 +751,6 @@ class MediaUploadControllerIntegrationTests {
                 arguments("unsupported content type", uploadRequest("AVATAR", "image/gif", 1)),
                 arguments("zero size", uploadRequest("AVATAR", "image/jpeg", 0)),
                 arguments("avatar above maximum", uploadRequest("AVATAR", "image/jpeg", 10_485_761)),
-                arguments("post image deferred", uploadRequest("POST_IMAGE", "image/png", 1)),
                 arguments("post video deferred", uploadRequest("POST_VIDEO", "video/mp4", 1)),
                 arguments("post image above maximum", uploadRequest("POST_IMAGE", "image/png", 20_971_521)),
                 arguments("post video above maximum", uploadRequest("POST_VIDEO", "video/mp4", 262_144_001)),

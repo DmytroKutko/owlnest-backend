@@ -58,9 +58,37 @@ PostCommentController
 
 Use this narrowly. Normal comment POST is append-only and non-idempotent; desired-state interaction PUT is a different contract. The `v1.` cursor is post-bound and oldest-first, not a generic feed pagination policy. There is no comment edit/delete/reply/moderation behavior, Redis path, event, or notification.
 
+## Reference 6: managed avatar/post-image media and external R2
+
+Best for: private direct upload, validated configuration, external-client port/adapter, splitting remote calls from database transactions, cross-feature service contracts, stable lock order, and leased scheduled cleanup.
+
+Evidence path:
+
+```text
+MediaController
+  -> media use-case service
+  -> short media transaction service
+  -> MediaObjectStorage -> R2 outside transaction
+
+ProfileAvatarTransactionService
+  -> profile lock
+  -> AvatarMediaLifecycleService (MANDATORY transaction join)
+
+Create/Replace/DeletePostService
+  -> post lock where applicable
+  -> PostImageMediaLifecycleService (MANDATORY transaction join)
+
+ManagedMediaCleanupJob
+  -> bounded PostgreSQL lease transaction
+  -> R2 DELETE outside transaction
+  -> finalize/retry transaction
+```
+
+Use this pattern only for external object lifecycle work. Do not generalize the cleanup scheduler into a queue, put R2 calls inside transactions, expose a media repository across features, or infer managed video/messenger support from the implemented image slices. Evidence: `media/**`, profile avatar and post-image services/controllers, Flyway V6/V7, focused integration tests, and `docs/features/managed-media-r2.md`.
+
 ## Draft-only material
 
 - `docs/architecture.md` contains accepted direction plus future Draft roadmap.
-- `docs/features/posts-architecture-plan.md` is the implemented source for the single-post CRUD/card, comments, and like/bookmark/repost slice.
+- `docs/features/posts-architecture-plan.md` is the implemented source for the single-post CRUD/card, managed-image, comments, and like/bookmark/repost slice.
 
-Treat only the implemented post package, Flyway V3–V5, generated OpenAPI, tests, and that feature document as current post evidence. Feed/post-list pagination, managed media upload, views, and comment mutation/moderation still require fresh business and technical gates; do not infer them from older Draft discussions.
+Treat only the implemented post package, Flyway V3–V5/V7, generated OpenAPI, tests, and that feature document as current post evidence. Managed post video, views, and comment mutation/moderation still require fresh business and technical gates; do not infer them from the implemented image lifecycle or older Draft discussions.

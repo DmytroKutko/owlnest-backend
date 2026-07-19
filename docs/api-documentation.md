@@ -39,6 +39,16 @@ The documentation endpoints are intentionally unauthenticated, but Try it out ca
 
 Pagination is live rather than snapshot-based. Root-relative `self` and `next` links carry the effective limit, terminal continuation fields are `null`, and responses use `Cache-Control: private, no-store`. Personalized, authored-only, and saved lists are not part of this endpoint.
 
+## Flutter Managed Post Image Flow
+
+1. Reserve exact metadata with `POST /api/v1/media/uploads` and `{"purpose":"POST_IMAGE","contentType":"image/webp","sizeBytes":524288}`. Keep `mediaId`; treat the returned upload URL and headers as temporary secrets.
+2. Flutter uploads the exact bytes directly to the returned R2 `PUT` URL using every required header. Do not send the OwlNest bearer token to R2.
+3. Confirm with authenticated `PUT /api/v1/media/{mediaId}/confirmation`.
+4. Attach the owned READY image with `POST /api/v1/posts` or full-replacement `PUT /api/v1/posts/{postId}` using `{"type":"IMAGE","mediaId":"..."}`. Legacy `{type,url}` remains valid; each item must have exactly one source.
+5. Read `media[].managed.deliveryUrl` from the post response. Authenticated `POST` to that root-relative URL returns a short-lived R2 GET capability; download bytes without forwarding the OwlNest token and do not persist the signed URL.
+
+Managed upload purposes advertised by OpenAPI are exactly `AVATAR` and `POST_IMAGE`. Managed video and messenger media are not implemented. Missing/cross-owner media returns nondisclosing `404 media.not_found`; wrong-purpose or non-ready media returns a documented `409` Problem Detail.
+
 ## WebSocket Boundary
 
 No WebSocket endpoint, channel, or message is implemented yet. The second Swagger group is intentionally empty and marked `planned`; it must not contain invented HTTP operations.

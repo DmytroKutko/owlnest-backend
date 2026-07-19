@@ -2,7 +2,6 @@ package dev.dkutko.owlnest.post.controller;
 
 import dev.dkutko.owlnest.post.domain.PostMedia;
 import dev.dkutko.owlnest.post.domain.PostMediaType;
-import dev.dkutko.owlnest.post.domain.PostType;
 import dev.dkutko.owlnest.post.service.PostWriteCommand;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,6 +12,7 @@ import jakarta.validation.constraints.Size;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 
 public record PostRequest(
         @Schema(
@@ -24,7 +24,6 @@ public record PostRequest(
         @NotBlank
         @Schema(minLength = 1, maxLength = 20_000)
         String description,
-        PostType postType,
         @ArraySchema(
                 maxItems = 5,
                 schema = @Schema(
@@ -43,19 +42,21 @@ public record PostRequest(
         List<PostMedia> mediaValues = media == null
                 ? List.of()
                 : media.stream().map(Media::toDomain).toList();
-        return new PostWriteCommand(postType, title, description, labels, mediaValues);
+        return new PostWriteCommand(title, description, labels, mediaValues);
     }
 
+    @Schema(name = "PostMediaRequest")
     public record Media(
             @NotNull
             PostMediaType type,
-            @NotBlank
-            @Schema(minLength = 1, maxLength = 2_048)
-            String url
+            @Schema(types = {"string", "null"}, minLength = 1, maxLength = 2_048)
+            String url,
+            @Schema(types = {"string", "null"}, format = "uuid")
+            UUID mediaId
     ) {
 
         PostMedia toDomain() {
-            return new PostMedia(type, URI.create(url));
+            return new PostMedia(type, url == null ? null : URI.create(url), mediaId);
         }
     }
 }

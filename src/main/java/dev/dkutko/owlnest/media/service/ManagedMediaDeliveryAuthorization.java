@@ -1,8 +1,15 @@
 package dev.dkutko.owlnest.media.service;
 
+import dev.dkutko.owlnest.media.domain.ManagedMediaPurpose;
+
 import java.util.UUID;
 
 public interface ManagedMediaDeliveryAuthorization {
 
-    boolean canDeliverActiveAvatar(UUID mediaId, UUID ownerAccountId, UUID viewerAccountId);
+    boolean canDeliver(
+            ManagedMediaPurpose purpose,
+            UUID mediaId,
+            UUID ownerAccountId,
+            UUID viewerAccountId
+    );
 }

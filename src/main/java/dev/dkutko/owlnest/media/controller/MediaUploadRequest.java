@@ -12,8 +12,8 @@ public record MediaUploadRequest(
         @NotNull
         @Schema(
                 description = "Implemented OwlNest use for the object",
-                example = "AVATAR",
-                allowableValues = {"AVATAR"}
+                example = "POST_IMAGE",
+                allowableValues = {"AVATAR", "POST_IMAGE"}
         )
         ManagedMediaPurpose purpose,
 

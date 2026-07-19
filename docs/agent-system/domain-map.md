@@ -111,14 +111,60 @@ GET /api/v1/posts/<id>/comments
 
 `Post` owns its lifecycle and counters; `PostComment` is an independently paged scalar persistence root with only UUID foreign keys, not an unbounded JPA association. Labels/media and interaction memberships are bounded JDBC-managed rows, not exposed entities. PostgreSQL is authoritative; post code does not use Redis or external media clients. The card retains its Flutter `#comments` navigation hook while the REST comment collection uses `/comments`.
 
+## Media module
+
+**Owns:** authenticated managed-media reservation/confirmation/cancellation/delivery, R2 storage access, lifecycle metadata, and retryable physical cleanup.
+
+| Role | Types |
+| --- | --- |
+| HTTP | `MediaController`, request/response records, `MediaExceptionHandler` |
+| Services | create/confirm/cancel/deliver use cases, transaction services, `AvatarMediaLifecycleService`, `PostImageMediaLifecycleService`, cleanup orchestration |
+| Domain/JPA | `ManagedMedia`, purpose/status/deletion enums |
+| Persistence port/adapter | `ManagedMediaRepository`, `ManagedMediaRepositoryImpl`, package-private Spring Data repository |
+| Object-storage port/adapter | `MediaObjectStorage`, `R2MediaObjectStorage`, disabled adapter |
+| Scheduled maintenance | `ManagedMediaCleanupJob`, conditional scheduling configuration |
+| PostgreSQL | `managed_media` and `profile.avatar_media_id` from Flyway V6; managed `post_media` association from Flyway V7 |
+
+```text
+POST /api/v1/media/uploads
+  -> reserve metadata transaction
+  -> presign direct create-only R2 PUT outside transaction
+
+PUT /api/v1/media/<id>/confirmation
+  -> read-only owner preflight
+  -> R2 HEAD outside transaction
+  -> locked confirmation transaction
+
+PUT/DELETE /api/v1/profile/me/avatar
+  -> profile row lock
+  -> public media lifecycle service joins the same transaction
+
+POST/PUT/DELETE /api/v1/posts[/<id>]
+  -> post transaction and row lock where applicable
+  -> public post-image lifecycle service joins the same transaction
+
+POST /api/v1/media/<id>/delivery
+  -> authorize current active avatar or active-post association
+  -> presign private R2 GET outside transaction
+
+scheduled cleanup
+  -> expire and lease bounded rows in PostgreSQL
+  -> R2 DELETE outside transaction
+  -> finalize or schedule retry in PostgreSQL
+```
+
+The bucket is private. Service projections carry UUIDs only; controller response types construct delivery links. V6 owns the base media lifecycle and avatar association; V7 adds the compatible managed-image source to `post_media` without rewriting legacy URL rows.
+
 ## Cross-module edges
 
 - `profile.service` uses public `identity.service` contracts for current identity/account provisioning.
 - `presence.service` uses public `identity.service` contracts.
 - `profile.service.GetPublicProfileService` uses public `presence.service.PresenceService`.
 - `post.service` uses public profile services for current-account provisioning and safe author summaries.
+- `profile.service.ProfileAvatarTransactionService` calls public `media.service.AvatarMediaLifecycleService` inside the profile-owned transaction.
+- post write services call public `media.service.PostImageMediaLifecycleService` inside the post-owned transaction.
 - No module imports another module's repository implementation or Spring Data interface.
 
 ## Not implemented
 
-Social graph, post feed/list, comment edit/delete/replies/moderation, managed media upload/storage, notification, messaging, WebSocket delivery, FCM, R2, queues, schedulers, and external HTTP clients have no production packages. Their documentation is roadmap material. Do not cite proposed types, tables, endpoints, or rules as repository facts.
+Social graph, managed post video/messenger attachments, comment edit/delete/replies/moderation, notification, messaging, WebSocket delivery, FCM, and message queues have no production packages. Their documentation is roadmap material. Do not cite proposed types, tables, endpoints, or rules as repository facts.

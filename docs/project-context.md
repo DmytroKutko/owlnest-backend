@@ -11,7 +11,7 @@ OwlNest Backend supports a Flutter social-media application. The initial product
 - later, persisted text messaging with live WebSocket delivery;
 - later, Firebase Cloud Messaging push notifications.
 
-The post contract can persist untrusted absolute HTTPS image/video references for Flutter rendering. OwlNest now supports private, Cloudflare R2-backed managed uploads for profile avatars, including confirmation, authenticated delivery, replacement, and retryable cleanup. The backend validates R2 object metadata but does not proxy object bytes. Managed post attachments remain a later slice; the existing URL-backed `post_media` contract is unchanged. Recommendation algorithms, microservices, and message brokers remain outside the initial scope unless a concrete requirement justifies them.
+The post contract preserves untrusted absolute HTTPS image/video references for Flutter rendering and additionally supports private Cloudflare R2-backed managed post images. Managed avatars and post images share reservation, confirmation, authenticated delivery, replacement/detachment, and retryable cleanup infrastructure; the backend validates R2 object metadata but does not proxy object bytes. Managed post video and messenger media remain deferred. Recommendation algorithms, microservices, and message brokers remain outside the initial scope unless a concrete requirement justifies them.
 
 ## Architectural Preference
 

@@ -97,10 +97,26 @@ class OpenApiDocumentationIntegrationTests {
                 .andExpect(jsonPath("$.components.schemas.PostRequest.properties.description.minLength").value(1))
                 .andExpect(jsonPath("$.components.schemas.PostRequest.properties.description.maxLength")
                         .value(20_000))
+                .andExpect(jsonPath("$.components.schemas.PostRequest.properties.postType").doesNotExist())
+                .andExpect(jsonPath("$.components.schemas.PostResponse.properties.postType").exists())
                 .andExpect(jsonPath("$.components.schemas.PostRequest.properties.labels.items.minLength").value(1))
                 .andExpect(jsonPath("$.components.schemas.PostRequest.properties.labels.items.maxLength").value(50))
-                .andExpect(jsonPath("$.components.schemas.Media.properties.url.minLength").value(1))
-                .andExpect(jsonPath("$.components.schemas.Media.properties.url.maxLength").value(2_048))
+                .andExpect(jsonPath("$.components.schemas.PostMediaRequest.properties.url.minLength").value(1))
+                .andExpect(jsonPath("$.components.schemas.PostMediaRequest.properties.url.maxLength").value(2_048))
+                .andExpect(jsonPath("$.components.schemas.PostMediaRequest.properties.mediaId.format").value("uuid"))
+                .andExpect(jsonPath("$.components.schemas.PostMediaResponse.properties.managed").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].post.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts'].post.responses['409']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{id}'].put.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/posts/{id}'].put.responses['409']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
                 .andExpect(jsonPath("$.components.schemas.PostResponse.properties.description.minLength").value(1))
                 .andExpect(jsonPath("$.components.schemas..properties.isAuthor").exists());
     }
@@ -226,6 +242,8 @@ class OpenApiDocumentationIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.operationId")
                         .value("createMediaUpload"))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.purpose.enum")
+                        .value(containsInAnyOrder("AVATAR", "POST_IMAGE")))
                 .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.operationId")
                         .value("confirmMediaUpload"))
                 .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.operationId")
@@ -363,7 +381,7 @@ class OpenApiDocumentationIntegrationTests {
                 .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.required")
                         .value(containsInAnyOrder("purpose", "contentType", "sizeBytes")))
                 .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.purpose.enum")
-                        .value(containsInAnyOrder("AVATAR")))
+                        .value(containsInAnyOrder("AVATAR", "POST_IMAGE")))
                 .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.contentType.minLength")
                         .value(1))
                 .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.contentType.maxLength")

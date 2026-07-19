@@ -40,7 +40,7 @@ public class ManagedMediaTransactionService {
         }
         Instant now = Instant.now();
         Instant uploadExpiresAt = now.plus(uploadTtl);
-        String objectKey = generateObjectKey();
+        String objectKey = generateObjectKey(command.purpose());
         ManagedMedia media = ManagedMedia.reserve(
                 ownerAccountId,
                 command.purpose(),
@@ -149,8 +149,13 @@ public class ManagedMediaTransactionService {
         );
     }
 
-    private static String generateObjectKey() {
-        return "managed/objects/" + UUID.randomUUID();
+    private static String generateObjectKey(ManagedMediaPurpose purpose) {
+        String prefix = switch (purpose) {
+            case AVATAR -> "managed/v1/avatars/";
+            case POST_IMAGE -> "managed/v1/posts/";
+            case POST_VIDEO -> throw new IllegalArgumentException("Post video uploads are not enabled");
+        };
+        return prefix + UUID.randomUUID();
     }
 
     record Reservation(

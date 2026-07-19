@@ -49,14 +49,14 @@ The test-user JSON receives email, password, first name, and last name from the 
 - `Create Avatar Upload` accepts only `AVATAR`, reserves exact metadata, and saves only `mediaId`; the client must immediately use the returned short-lived R2 URL and every required header without persisting the capability. Per-account outstanding storage is capped at 10 objects/100 MiB and excess reservations return `429`.
 - `Confirm Upload` verifies the uploaded object's R2 content type, byte length, and ETag. `Set Current Avatar` atomically activates it and makes prior avatar cleanup eligible.
 - `Create Avatar Delivery` rechecks the current active association and returns a short-lived private URL that the collection deliberately does not save. `Remove Current Avatar` detaches it; `Cancel Managed Media` applies only before activation.
-- `Create Post` submits optional title, `PERSONAL`/`COMMUNITY` classification, ordered labels, and ordered image/video HTTPS references, then saves the returned `postId`.
+- `Create Post` submits optional title, ordered labels, and ordered image/video references, then saves the returned `postId`; the backend derives `COMMUNITY` for an author email ending in `@owlnest.com` and `PERSONAL` otherwise.
 - `Get Post` returns the safe author card, public like/comment/repost counters, viewer-specific flags, absolute timestamps, and a same-post `#comments` client hook.
 - `List Global Posts` returns every active post with newest-first cursor pagination and saves its opaque `page.nextCursor` variable. Rerun it to continue, or clear `globalPostCursorQuery` to restart.
 - `Create Post Comment` appends exact plain text to an active post, saves `commentId`, and returns only the safe author projection.
 - `List Post Comments` returns an oldest-first page. It saves `page.nextCursor` into `commentCursorQuery`; rerun it to request the next page, or clear that collection variable to restart.
-- `Replace Post` fully replaces author-editable content; the sample intentionally demonstrates a description-only post.
+- `Replace Post` fully replaces author-editable content while preserving the server-derived post type.
 - Like, bookmark, and repost PUT/DELETE requests set or clear desired state idempotently. Bookmark is private and has no public counter.
-- `Delete Post` soft-deletes the current user's post; run it last. Comment edit/delete/reply routes, personalized/saved post lists, and managed post attachment are not implemented in this slice.
+- `Delete Post` soft-deletes the current user's post and detaches its managed images; run it last. Comment edit/delete/reply routes, personalized/saved post lists, managed post video, and messenger media are not implemented in this slice.
 
 To populate the complete local community demo after `./setup.sh`, set a strong `KEYCLOAK_SEED_USER_PASSWORD` in `.env` and run:
 
@@ -66,7 +66,7 @@ OWLNEST_LOCAL_SEED=true ./scripts/seed-local-community-demo.sh
 
 The ignored owner-only inventory makes the versioned seed resumable. The script operates only against the fixed localhost backend/Keycloak realm, creates or reuses six marked fictional `@owlnest.com` identities, and reconciles 36 community posts, 24 likes, and 18 comments. It never stores credentials in Git, adopts unmarked Keycloak accounts, writes product rows directly, deletes unrelated local data, or treats a duplicate match as safe.
 
-Post media URLs are untrusted metadata: the backend does not download or proxy them. A client fetching them must not attach the OwlNest bearer token to the media host. Managed avatar bytes use a separate private R2 flow documented in [`docs/features/managed-media-r2.md`](../docs/features/managed-media-r2.md); presigned capability URLs are secrets and must not be logged or persisted as durable avatar URLs.
+Post media URLs are untrusted metadata: the backend does not download or proxy them. A client fetching them must not attach the OwlNest bearer token to the media host. Managed avatar and post-image bytes use the private R2 flow documented in [`docs/features/managed-media-r2.md`](../docs/features/managed-media-r2.md); presigned capability URLs are secrets and must not be logged or persisted as durable media URLs.
 
 If `Create Test User` returns `409`, keep the password previously assigned to that user or choose another email. Creating the same user again does not replace its password.
 

@@ -48,7 +48,13 @@ public record PostResponse(
                 card.postType(),
                 card.labels(),
                 card.media().stream()
-                        .map(item -> new Media(item.type(), item.url()))
+                        .map(item -> new Media(
+                                item.type(),
+                                item.url(),
+                                item.managedMediaId() == null
+                                        ? null
+                                        : MediaReferenceResponse.from(item.managedMediaId())
+                        ))
                         .toList(),
                 new Counters(
                         card.counters().likes(),
@@ -81,10 +87,12 @@ public record PostResponse(
     ) {
     }
 
+    @Schema(name = "PostMediaResponse")
     public record Media(
             PostMediaType type,
-            @Schema(minLength = 1, maxLength = 2_048)
-            URI url
+            @Schema(types = {"string", "null"}, minLength = 1, maxLength = 2_048)
+            URI url,
+            MediaReferenceResponse managed
     ) {
     }
 

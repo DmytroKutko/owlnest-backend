@@ -15,8 +15,12 @@ Never replace PostgreSQL behavior with H2 tests. Never let Hibernate create/upda
 | `V3__create_post_tables.sql` | `post`, ordered label/media rows, like/bookmark/repost memberships, counters, constraints, indexes, and local-account foreign keys |
 | `V4__create_post_comments.sql` | append-only `post_comment`, chronological/author indexes, local-account/post FKs, text constraint, and forward relaxation of the post comment counter check |
 | `V5__validate_post_comment_count.sql` | validation of the nonnegative post comment counter check in a separate transaction/lock scope |
+| `V6__create_managed_media.sql` | managed-media lifecycle/cleanup metadata, constraints/indexes/immutability trigger, and nullable profile avatar reference; legacy `post_media` remains unchanged |
+| `V7__attach_managed_media_to_posts.sql` | nullable legacy media URL, exactly-one URL/managed-image source constraints, generated purpose discriminator, unique attachment, and purpose-safe FK to managed media |
 
 Migration names use `V<integer>__<snake_case_description>.sql`. Inspect the directory immediately before selecting the next version. Applied shared migrations are immutable; correct them with a new forward migration.
+
+V7 is a non-rolling transition once managed-only post rows exist: drain old application instances, migrate, then start the new binary. Its stored generated discriminator and constraint/index construction require representative table-size, lock-duration, and disk-headroom evidence before use on a large production `post_media`; local or otherwise bounded maintenance evidence must not be generalized to an unknown production volume.
 
 ## Schema style established by evidence
 
@@ -40,8 +44,10 @@ Place normal transaction boundaries on public service use-case methods invoked t
 
 Existing post mutations and comment creation share the active-post pessimistic write lock. Under it, comment creation derives a strictly increasing per-post PostgreSQL timestamp, inserts the row, and increments the managed `Post.commentCount` in one transaction. V4 swaps the old zero-only constraint for a nonnegative `NOT VALID` constraint without an existing-row scan; V5 validates it in a separate transaction so the initial strong ALTER lock is released first. Neither migration rewrites V3.
 
+Managed-media reservations acquire a namespaced transaction advisory lock derived from the owner UUID, then count and sum every non-`DELETED` owner row before inserting. This serializes the 10-object/100-MiB account quota without holding an external R2 call in the transaction. Avatar mutation locks the profile first; post-image replacement locks the post first; both then lock media UUIDs in sorted order. Cleanup claims bounded due rows with `FOR UPDATE SKIP LOCKED`, commits the lease, performs R2 deletion, and finalizes or retries in a new transaction.
+
 For schema changes, model query patterns before indexes. Analyze production row count, lock/table rewrite, default/backfill, nullability staging, concurrent index creation, old/new application coexistence, and forward-fix/data-loss behavior. Mark unknown production volumes `NEEDS_CONFIRMATION`.
 
 ## Verification
 
-Run migration and JPA validation through PostgreSQL Testcontainers, repository/use-case tests for constraints and queries, concurrency tests where races matter, the full suite, and an independent migration review. Compare migration SQL, resulting catalog, and entity mappings.
+Run migration and JPA validation through PostgreSQL Testcontainers plus focused repository/use-case tests for constraints and queries. Add concurrency tests where races matter. Routine additive `FAST` migrations may use writer + code review; require independent migration review for destructive, backfilled, lock/compatibility-sensitive, or data-loss-risk transitions. Run the broadest justified suite once after final corrections and compare migration SQL, resulting catalog, and entity mappings.

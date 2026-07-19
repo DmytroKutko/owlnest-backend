@@ -1,5 +1,8 @@
 package dev.dkutko.owlnest.post.controller;
 
+import dev.dkutko.owlnest.media.service.MediaNotFoundException;
+import dev.dkutko.owlnest.media.service.MediaNotReadyException;
+import dev.dkutko.owlnest.media.service.MediaPurposeMismatchException;
 import dev.dkutko.owlnest.post.service.PostAccessDeniedException;
 import dev.dkutko.owlnest.post.service.PostNotFoundException;
 import jakarta.validation.ConstraintViolationException;
@@ -35,6 +38,26 @@ public class PostExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(MediaNotFoundException.class)
+    ProblemDetail handleMediaNotFound(MediaNotFoundException exception) {
+        return problem(HttpStatus.NOT_FOUND, "Managed media not found", exception.getMessage(), "media.not_found");
+    }
+
+    @ExceptionHandler(MediaNotReadyException.class)
+    ProblemDetail handleMediaNotReady(MediaNotReadyException exception) {
+        return problem(HttpStatus.CONFLICT, "Managed media not ready", exception.getMessage(), "media.not_ready");
+    }
+
+    @ExceptionHandler(MediaPurposeMismatchException.class)
+    ProblemDetail handleMediaPurposeMismatch(MediaPurposeMismatchException exception) {
+        return problem(
+                HttpStatus.CONFLICT,
+                "Managed media purpose mismatch",
+                exception.getMessage(),
+                "media.purpose_mismatch"
+        );
+    }
+
     @ExceptionHandler({
             MethodArgumentNotValidException.class,
             MethodArgumentTypeMismatchException.class,
@@ -49,6 +72,13 @@ public class PostExceptionHandler {
         );
         problem.setTitle("Invalid request");
         problem.setProperty("code", "request.validation_failed");
+        return problem;
+    }
+
+    private static ProblemDetail problem(HttpStatus status, String title, String detail, String code) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        problem.setProperty("code", code);
         return problem;
     }
 }

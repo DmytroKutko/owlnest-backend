@@ -253,6 +253,7 @@ class ManagedMediaV6MigrationIntegrationTests {
                     .schemas(schema)
                     .defaultSchema(schema)
                     .locations("classpath:db/migration")
+                    .target(MigrationVersion.fromVersion("6"))
                     .load()
                     .migrate();
 

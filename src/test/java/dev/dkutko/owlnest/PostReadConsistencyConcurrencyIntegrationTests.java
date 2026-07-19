@@ -41,7 +41,6 @@ class PostReadConsistencyConcurrencyIntegrationTests {
     private static final Version ALPHA = new Version(
             "Alpha title",
             "Alpha description",
-            "PERSONAL",
             List.of("alpha-one", "alpha-two"),
             List.of(new Media("IMAGE", "https://cdn.example.com/alpha-one.png"),
                     new Media("VIDEO", "https://cdn.example.com/alpha-two.mp4"))
@@ -49,7 +48,6 @@ class PostReadConsistencyConcurrencyIntegrationTests {
     private static final Version BETA = new Version(
             "Beta title",
             "Beta description",
-            "COMMUNITY",
             List.of("beta-one", "beta-two"),
             List.of(new Media("VIDEO", "https://cdn.example.com/beta-one.mp4"),
                     new Media("IMAGE", "https://cdn.example.com/beta-two.png"))
@@ -113,7 +111,9 @@ class PostReadConsistencyConcurrencyIntegrationTests {
                             .with(jwt().jwt(token -> token.subject(viewer))))
                     .andReturn();
             assertThat(result.getResponse().getStatus()).isEqualTo(200);
-            assertThat(Version.fromResponse(result.getResponse().getContentAsString())).isIn(ALPHA, BETA);
+            String responseBody = result.getResponse().getContentAsString();
+            assertThat(JsonPath.<String>read(responseBody, "$.postType")).isEqualTo("PERSONAL");
+            assertThat(Version.fromResponse(responseBody)).isIn(ALPHA, BETA);
             barrier.await(BARRIER_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         }
         return null;
@@ -134,7 +134,6 @@ class PostReadConsistencyConcurrencyIntegrationTests {
     private record Version(
             String title,
             String description,
-            String postType,
             List<String> labels,
             List<Media> media
     ) {
@@ -144,7 +143,6 @@ class PostReadConsistencyConcurrencyIntegrationTests {
                     {
                       "title": "%s",
                       "description": "%s",
-                      "postType": "%s",
                       "labels": ["%s", "%s"],
                       "media": [
                         {"type": "%s", "url": "%s"},
@@ -154,7 +152,6 @@ class PostReadConsistencyConcurrencyIntegrationTests {
                     """.formatted(
                     title,
                     description,
-                    postType,
                     labels.get(0),
                     labels.get(1),
                     media.get(0).type(),
@@ -171,7 +168,6 @@ class PostReadConsistencyConcurrencyIntegrationTests {
             return new Version(
                     JsonPath.read(json, "$.title"),
                     JsonPath.read(json, "$.description"),
-                    JsonPath.read(json, "$.postType"),
                     List.copyOf(responseLabels),
                     List.of(
                             new Media(mediaTypes.get(0), mediaUrls.get(0)),

@@ -518,7 +518,7 @@ while IFS= read -r post; do
 
     if [[ "$match_count" == "0" ]]; then
         post_payload="$TEMP_DIR/post-$key.json"
-        jq '{title, description, postType: "COMMUNITY", labels, media: []}' <<< "$post" > "$post_payload"
+        jq '{title, description, labels, media: []}' <<< "$post" > "$post_payload"
         http_request POST "$BACKEND_URL/api/v1/posts" "$TEMP_DIR/token-$author" "$post_payload"
         require_status "201" "creating community post $key"
         post_id="$(jq -er '.id' "$LAST_RESPONSE")"

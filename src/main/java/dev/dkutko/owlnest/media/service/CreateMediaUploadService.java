@@ -28,8 +28,9 @@ public class CreateMediaUploadService {
     }
 
     public CreatedMediaUpload create(CreateMediaUploadCommand command) {
-        if (command.purpose() != ManagedMediaPurpose.AVATAR) {
-            throw new IllegalArgumentException("Only avatar uploads are currently supported");
+        if (command.purpose() != ManagedMediaPurpose.AVATAR
+                && command.purpose() != ManagedMediaPurpose.POST_IMAGE) {
+            throw new IllegalArgumentException("Only avatar and post image uploads are currently supported");
         }
         objectStorage.ensureAvailable();
         UUID ownerAccountId = currentAccountService.getCurrentAccountId();

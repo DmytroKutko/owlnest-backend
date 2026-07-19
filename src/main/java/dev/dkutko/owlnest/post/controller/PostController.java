@@ -82,7 +82,23 @@ public class PostController {
                             schema = @Schema(implementation = ProblemDetail.class)
                     )
             ),
-            @ApiResponse(responseCode = "401", description = "Missing or invalid bearer token", content = @Content)
+            @ApiResponse(responseCode = "401", description = "Missing or invalid bearer token", content = @Content),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Managed media not found for the current owner",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Managed media has the wrong purpose or is not ready",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)
+                    )
+            )
     })
     public ResponseEntity<PostResponse> create(@Valid @RequestBody PostRequest request) {
         PostCard card = createPostService.create(request.toCommand());
@@ -139,7 +155,15 @@ public class PostController {
             ),
             @ApiResponse(
                     responseCode = "404",
-                    description = "Post not found",
+                    description = "Post or managed media not found",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                            schema = @Schema(implementation = ProblemDetail.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Managed media has the wrong purpose or is not ready",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                             schema = @Schema(implementation = ProblemDetail.class)

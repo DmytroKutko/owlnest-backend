@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,6 +50,12 @@ public class PostCardQueryRepositoryImpl implements PostCardQueryRepository {
                        WHERE media.post_id = p.id
                        ORDER BY media.position
                    ) AS media_urls,
+                   ARRAY(
+                       SELECT media.managed_media_id
+                       FROM post_media media
+                       WHERE media.post_id = p.id
+                       ORDER BY media.position
+                   ) AS managed_media_ids,
                    EXISTS (
                        SELECT 1 FROM post_like interaction
                        WHERE interaction.post_id = p.id AND interaction.account_id = ?
@@ -178,14 +185,31 @@ public class PostCardQueryRepositoryImpl implements PostCardQueryRepository {
 
     private static List<PostMedia> readMedia(ResultSet resultSet) throws SQLException {
         List<String> types = readTextArray(resultSet, "media_types");
-        List<String> urls = readTextArray(resultSet, "media_urls");
+        List<String> urls = readNullableTextArray(resultSet, "media_urls");
+        Array managedIdsSqlArray = resultSet.getArray("managed_media_ids");
+        Object[] managedIds = (Object[]) managedIdsSqlArray.getArray();
         List<PostMedia> media = new ArrayList<>(types.size());
         for (int index = 0; index < types.size(); index++) {
+            String url = urls.get(index);
+            UUID managedMediaId = managedIds[index] == null
+                    ? null
+                    : UUID.fromString(managedIds[index].toString());
             media.add(new PostMedia(
                     PostMediaType.valueOf(types.get(index)),
-                    URI.create(urls.get(index))
+                    url == null ? null : URI.create(url),
+                    managedMediaId
             ));
         }
         return List.copyOf(media);
+    }
+
+    private static List<String> readNullableTextArray(ResultSet resultSet, String column) throws SQLException {
+        Array sqlArray = resultSet.getArray(column);
+        Object[] values = (Object[]) sqlArray.getArray();
+        List<String> strings = new ArrayList<>(values.length);
+        for (Object value : values) {
+            strings.add((String) value);
+        }
+        return Collections.unmodifiableList(strings);
     }
 }

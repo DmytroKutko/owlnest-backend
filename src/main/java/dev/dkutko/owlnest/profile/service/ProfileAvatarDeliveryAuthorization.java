@@ -1,5 +1,6 @@
 package dev.dkutko.owlnest.profile.service;
 
+import dev.dkutko.owlnest.media.domain.ManagedMediaPurpose;
 import dev.dkutko.owlnest.media.service.ManagedMediaDeliveryAuthorization;
 import dev.dkutko.owlnest.profile.domain.Profile;
 import dev.dkutko.owlnest.profile.repository.ProfileRepository;
@@ -17,7 +18,15 @@ public class ProfileAvatarDeliveryAuthorization implements ManagedMediaDeliveryA
     }
 
     @Override
-    public boolean canDeliverActiveAvatar(UUID mediaId, UUID ownerAccountId, UUID viewerAccountId) {
+    public boolean canDeliver(
+            ManagedMediaPurpose purpose,
+            UUID mediaId,
+            UUID ownerAccountId,
+            UUID viewerAccountId
+    ) {
+        if (purpose != ManagedMediaPurpose.AVATAR) {
+            return false;
+        }
         return profileRepository.findByAccountId(ownerAccountId)
                 .filter(profile -> mediaId.equals(profile.getAvatarMediaId()))
                 .filter(profile -> isVisibleTo(profile, viewerAccountId))
