@@ -91,6 +91,9 @@ SUPPORTED_AGENT_KEYS = {
     "sandbox_mode",
 }
 
+BOUNDED_PASS_MARKER = "Treat each assignment as one bounded pass."
+QUALITY_STOP_MARKER = "Treat correct, verified work as complete:"
+
 
 class Validation:
     def __init__(self) -> None:
@@ -148,8 +151,12 @@ def validate_config_and_agents(validation: Validation) -> None:
     agents_config = config.get("agents", {})
     validation.require(isinstance(agents_config, dict), "config has [agents] table")
     if isinstance(agents_config, dict):
-        validation.require(agents_config.get("max_threads") == 6, "agents.max_threads is 6")
+        validation.require(agents_config.get("max_threads") == 3, "agents.max_threads is 3")
         validation.require(agents_config.get("max_depth") == 1, "agents.max_depth is 1")
+        validation.require(
+            agents_config.get("job_max_runtime_seconds") == 900,
+            "agent jobs have a 900-second stalled-job guardrail",
+        )
 
     agent_files = sorted((ROOT / ".codex/agents").glob("*.toml"))
     validation.require(len(agent_files) == 25, "exactly 25 custom-agent TOML files exist")
@@ -188,6 +195,14 @@ def validate_config_and_agents(validation: Validation) -> None:
             isinstance(instructions, str) and "do not spawn subagents" in instructions.lower(),
             f"{path.name} forbids nested subagents",
         )
+        validation.require(
+            isinstance(instructions, str) and BOUNDED_PASS_MARKER in instructions,
+            f"{path.name} requires one bounded pass",
+        )
+        validation.require(
+            isinstance(instructions, str) and QUALITY_STOP_MARKER in instructions,
+            f"{path.name} stops when correct work is verified",
+        )
 
     validation.require(set(names) == EXPECTED_AGENTS, "agent names match the required catalog")
     validation.require(len(names) == len(set(names)), "agent names are unique")
@@ -225,6 +240,90 @@ def validate_skills_and_docs(validation: Validation) -> None:
                 validation.require(bool(matches), f"documented glob resolves: {reference}")
             elif not any(character.isspace() for character in reference):
                 validation.require((ROOT / reference).exists(), f"documented path exists: {reference}")
+
+    workflow_text = (docs_root / "workflow-routing.md").read_text(encoding="utf-8")
+    for required_routing_literal in (
+        "`FAST`",
+        "target 30 minutes; checkpoint if exceeded",
+        "`STANDARD`",
+        "checkpoint by 90",
+        "`EXCEPTIONAL`",
+        "checkpoint by 120",
+        "PASS_TARGET_MINUTES:",
+        "BLOCKING: YES | NO",
+        "three cycles are forbidden.",
+    ):
+        validation.require(
+            required_routing_literal in workflow_text,
+            f"workflow defines bounded routing: {required_routing_literal}",
+        )
+
+    handoff_text = (docs_root / "handoff-contracts.md").read_text(encoding="utf-8")
+    for required_handoff_literal in (
+        "DELIVERY_TIER:",
+        "EXPECTED_SUBAGENT_PASS_RANGE:",
+        "TASK_BRIEF_REF:",
+        "PASSES_USED_AND_EXPECTED_RANGE:",
+        "USER_DECISION_REQUIRED:",
+        "BLOCKING: YES | NO",
+    ):
+        validation.require(
+            required_handoff_literal in handoff_text,
+            f"handoff tracks delivery controls: {required_handoff_literal}",
+        )
+
+    obsolete_cycle_phrases = (
+        "three complete cycles",
+        "three full cycles",
+        "Fresh reviewers rerun",
+        "fresh QA reruns",
+    )
+    orchestration_paths = [
+        ROOT / "AGENTS.md",
+        docs_root / "README.md",
+        docs_root / "workflow-routing.md",
+        docs_root / "maintenance-guide.md",
+        ROOT / ".agents/skills/spring-orchestrated-feature/SKILL.md",
+        ROOT / ".agents/skills/spring-testing-regression/SKILL.md",
+    ]
+    orchestration_text = "\n".join(
+        path.read_text(encoding="utf-8") for path in orchestration_paths
+    )
+    for obsolete_phrase in obsolete_cycle_phrases:
+        validation.require(
+            obsolete_phrase.lower() not in orchestration_text.lower(),
+            f"orchestration removes obsolete loop phrase: {obsolete_phrase}",
+        )
+
+    obsolete_rigid_limit_phrases = (
+        "hard cap",
+        "time cap",
+        "pass cap",
+        "runtime caps",
+        "PASS_DEADLINE_MINUTES:",
+        "THIS_PASS_OUTCOME_AND_DEADLINE:",
+        "USER_APPROVAL_REQUIRED:",
+    )
+    quality_stop_text = f"{orchestration_text}\n{handoff_text}"
+    for obsolete_phrase in obsolete_rigid_limit_phrases:
+        validation.require(
+            obsolete_phrase.lower() not in quality_stop_text.lower(),
+            f"orchestration removes obsolete rigid-limit phrase: {obsolete_phrase}",
+        )
+
+    catalog_text = (docs_root / "README.md").read_text(encoding="utf-8")
+    for obsolete_trigger in (
+        "| REST behavior changes |",
+        "| durable data changes |",
+        "| non-trivial implementation |",
+        "| every migration |",
+        "| API/integration changes |",
+        "| after implementation/fixes |",
+    ):
+        validation.require(
+            obsolete_trigger not in catalog_text,
+            f"agent catalog removes broad trigger: {obsolete_trigger}",
+        )
 
 
 def java_package(text: str) -> str | None:

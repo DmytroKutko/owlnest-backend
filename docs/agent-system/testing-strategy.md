@@ -25,11 +25,11 @@ Use `Test` or `Tests` suffix and behavior names such as `rejectsExpiredToken()`.
 
 ## Evidence workflow
 
-1. Before changes: record Git status, focused baseline, full `./gradlew test`, environment limitations, and existing failures.
+1. Before changes: record Git status, user-owned dirty files, the smallest focused baseline, environment limitations, and known failures. Run a full pre-change suite only when broad baseline ambiguity justifies it.
 2. Map every acceptance criterion to unit/slice/integration/contract/security/concurrency/manual verification.
 3. When practical, demonstrate that a new regression test fails for the intended reason before implementation.
-4. After each work package: run focused tests and record exact command/result.
-5. After implementation: independent API QA, full regression, `./gradlew build`, agent-system validation, `git diff --check`, and complete diff audit.
+4. After each work package: run only tests invalidated by that package and record exact command/result.
+5. After the last relevant correction: run the broadest tier-appropriate suite once, applicable independent QA, agent-system validation when relevant, `git diff --check`, and complete diff audit. Do not require both API QA and regression QA when one lane covers the unchanged evidence.
 
 Gradle 9.5.1 must launch on Java 17+ and then resolves Java 21. A stale Java 11 launcher failure occurs before project compilation and must be reported as environment/baseline evidence, not a code failure.
 

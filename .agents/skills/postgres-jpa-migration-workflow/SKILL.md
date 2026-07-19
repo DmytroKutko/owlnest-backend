@@ -17,11 +17,15 @@ Current JPA domain entities use field annotations, protected no-arg constructors
 
 ## Gates
 
-1. `postgres_data_modeler`: query-driven schema, constraints/indexes, ownership, deletion, volume, locking, backfill, rolling transition.
-2. `persistence_jpa_reviewer`: mapping parity, fetch/query behavior, N+1, projections, batching, equality, locks.
-3. `transaction_consistency_reviewer`: atomic units, races, unique constraints, retry/idempotency, proxy validity.
-4. Root approves design and migration sequence before `spring_backend_developer` writes SQL/code.
-5. `database_migration_reviewer` independently checks history, production locks/rewrites, old/new coexistence, forward-fix, and data loss.
-6. Validate on PostgreSQL Testcontainers; never rely on H2. Run focused tests, full `./gradlew test`, and JPA schema validation.
+Classify the transition before routing. A routine additive table/column for a known pattern, with no backfill, destructive behavior, existing-row validation, risky lock, new relationship/fetch behavior, or difficult race may stay `FAST`: the root checks the plan, `spring_backend_developer` writes SQL/code/tests, and `spring_code_reviewer` reviews schema/JPA/transaction parity.
+
+Add only the specialist that owns a concrete risk:
+
+1. `postgres_data_modeler` for non-routine constraints/indexes, deletion/data-loss choice, backfill, volume, locking, or rolling transition.
+2. `persistence_jpa_reviewer` for new relationships, custom queries, fetch/N+1, projections, batching, equality, or locks.
+3. `transaction_consistency_reviewer` for a new race, retry/idempotency rule, complex locking, or cross-store consistency.
+4. `database_migration_reviewer` for compatibility-sensitive, lock/rewrite, backfill, destructive, or otherwise production-risky migrations.
+
+Root approves the applicable design before the writer edits SQL/code. Validate on PostgreSQL Testcontainers; never rely on H2. Run focused migration/JPA tests and the broadest justified suite once after final corrections.
 
 For large or concurrent tables, require evidence for index creation and backfill strategy rather than assuming a single blocking ALTER is safe.

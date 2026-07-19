@@ -2,31 +2,33 @@
 
 ## Root Orchestration
 
-The main Codex thread is the root Orchestrator. It may route work to the 25 project agents in `.codex/agents/`; agents are direct children only and must not spawn further agents. Select the smallest team justified by task scope and risk. Do not run every agent for every task.
+The main Codex thread is the root Orchestrator. It may route work to the 25 project agents in `.codex/agents/`; agents are direct children and must not spawn further agents. Project configuration and policy allow no more than three child agents active at once. Parallelize only independent read-only work.
 
-Before non-trivial implementation, the Orchestrator must:
+Before the first delegation, record `MASTER_REQUEST`, `DELIVERY_TIER`, active-time target/checkpoint, expected normal subagent-pass range, current pass count, affected surfaces, assumptions, and the smallest justified route. One pass is one started subagent turn, including a follow-up or re-review; a timeout or partial result still counts for visibility.
 
-1. Preserve the user's original request as `MASTER_REQUEST` and determine whether authoritative product behavior exists.
-2. Invoke `business_analyst` for informal, dictated, incomplete, ambiguous, or rule-light feature ideas, then `requirements_acceptance_analyst`; record assumptions and unresolved questions explicitly.
-3. Inspect Git status, current failures, accepted ADRs, relevant feature docs, reference implementations, and affected API/PostgreSQL/Redis/security/integration surfaces.
-4. Produce numbered acceptance criteria and a baseline, then resolve applicable domain, application, API, data, JPA, Redis, transaction, security, resilience, observability, test, and deployment designs before implementation.
-5. Use `spring_backend_developer` as the only normal production Java and Flyway writer. `backend_test_engineer` may edit tests; `ci_deployment_engineer` may edit only its declared CI/deployment surfaces.
-6. For substantial new modules, review the minimum feature skeleton with `architecture_conformance_reviewer` before full implementation.
-7. Launch applicable reviewers and QA independently from the writer. Route findings back to the same developer context with finding-to-fix evidence; allow at most three complete fix/review cycles by default.
-8. Finish only when `release_gatekeeper` can cite observed evidence for every mandatory gate. Never report an unexecuted command as passed; distinguish pre-existing failures from introduced ones.
+| Delivery tier | Typical scope | Active-time target/checkpoint | Normal subagent passes |
+| --- | --- | --- | --- |
+| `FAST` | one known-pattern endpoint or CRUD, existing JWT boundary, routine additive PostgreSQL change, no new ownership/integration/concurrency model | target 30 minutes; checkpoint if exceeded | 2-3 |
+| `STANDARD` | several related use cases or a non-routine ownership, data, or compatibility rule | target 60 minutes; checkpoint by 90 | 3-5 |
+| `EXCEPTIONAL` | WebSocket/external integration, Redis or multi-store consistency, difficult concurrency, major new module, or deployment change | target 90 minutes; checkpoint by 120 | up to 7 |
 
-Routing minimums:
+Trivial documentation or obvious one-line work stays in the root and normally uses no subagent. Time and pass numbers are planning signals, not permission to ship broken work or mandatory stop conditions. At a checkpoint, report completed work, evidence, remaining blocking risks, and the smallest next step; stop optional polishing. Continue a bounded, targeted correction automatically when a blocking correctness, security, data, test, or architecture finding remains. User approval is required only for scope expansion, a materially different solution, or work beyond the two permitted blocking-finding correction cycles.
 
-- Trivial change: Orchestrator, rules scout when relevant, developer, code review, focused validation.
-- Informal feature: business analysis and acceptance gates before technical design.
-- Standard backend feature: rules/discovery, applicable architects and contract/data specialists, tests, one developer, architecture/code review, API QA, regression QA, release gate.
-- PostgreSQL/migration: data model, JPA, transaction, migration review; add performance review for volume/concurrency.
-- Redis: Redis architecture, consistency, resilience, failure/stale-data tests; add performance review for contention or volume.
-- Security-sensitive: independent security review plus negative, cross-user, and ownership tests.
-- External integration: resilience review with explicit timeout, retry, idempotency, and partial-failure behavior.
-- Deployment-impacting: observability and CI/deployment review with health, smoke, migration, and rollback evidence.
+Apply these routing rules:
 
-Detailed gates, routing, handoffs, and evidence contracts live in `docs/agent-system/` and the narrow skills under `.agents/skills/`. Read only the skills applicable to the current task. Treat accepted ADRs and implemented tests/code as stronger evidence than Draft plans. New project agent configuration is reliably loaded from the next Codex session; do not claim the current session reloaded it.
+1. Clear conversational or dictated wording does not by itself require analysts. The root may write concise acceptance criteria. Use `business_analyst` only for material product ambiguity and `requirements_acceptance_analyst` only when several rules need independent traceability.
+2. The root inspects Git status, relevant instructions, the nearest implementation, and focused baseline evidence. Use either `project_rules_scout` or `repository_domain_explorer` only when that work is large enough to benefit; use both only for distinct unresolved questions.
+3. Invoke a specialist only for a concrete risk that the writer and final reviewer cannot cover from an accepted pattern. Routine bearer authentication is not a new security design. A routine additive migration is not automatically a four-agent data workflow.
+4. Use `spring_backend_developer` as the sole normal production Java/Flyway writer. For `FAST` work the same writer may add focused tests; add `backend_test_engineer` only when test design is independently complex.
+5. Require independent security review for new authorization/ownership, sensitive-data, token/configuration, upload, or public-boundary behavior. Require data/migration specialists for destructive or compatibility-sensitive transitions, backfills, risky locks, or difficult concurrency. Redis, external integration, and deployment changes retain their applicable specialist gates.
+6. New modules or major restructuring retain the skeleton architecture gate. A known-pattern endpoint inside an existing module does not.
+7. Run one initial independent review. A finding is blocking only when it invalidates an acceptance criterion, runtime correctness, security/ownership, data safety, required architecture, compilation, migration, or a required test. Fix blocking findings and revalidate only the affected evidence. One targeted correction cycle is normal; a second is allowed only when a blocking `CRITICAL`/`HIGH` finding remains. After two unsuccessful targeted cycles, stop with evidence and ask the user instead of looping.
+8. `MEDIUM`/`LOW` suggestions that do not affect the conditions above are advisory. They may be applied inside an already-active writer pass when trivial, otherwise record them as follow-up and finish. They must not trigger another writer pass, reviewer pass, QA lane, full suite, or release cycle. Reuse the same reviewer context when targeted revalidation is actually required; otherwise the root verifies the affected evidence.
+9. The root performs the final evidence/diff check for `FAST` and ordinary `STANDARD` work. Add `release_gatekeeper` for `EXCEPTIONAL`, deployment-impacting, irreversible-data, new security-boundary, or otherwise high-risk work.
+
+Every subagent assignment must be one bounded pass with a concrete question, owned files or read-only scope, evidence paths, a target shorter than the configured 15-minute stalled-job guardrail, and concise required output. A timed-out pass returns partial evidence; it may be continued only for remaining blocking work, not optional refinement. Agents must not broaden scope or begin another cycle. Prefer safe assumptions over blocking questions; ask the user only when behavior, destructive action, or scope expansion cannot be chosen safely.
+
+Finish as soon as acceptance criteria are met, relevant focused verification passes, required architecture boundaries hold, and no blocking finding remains. Run the broadest justified suite at most once after the final blocking correction. Never report an unexecuted command as passed; distinguish pre-existing failures from introduced ones. Detailed routing and quality-based stop rules live in `docs/agent-system/workflow-routing.md`; new project agent configuration loads reliably in a new session.
 
 ## Project Structure & Module Organization
 

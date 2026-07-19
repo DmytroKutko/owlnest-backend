@@ -5,7 +5,7 @@ description: Gate an OwlNest authentication, authorization, ownership, sensitive
 
 # Spring Security Gate
 
-Use for authentication, roles/permissions, user-owned resources, admin behavior, sensitive data, uploads, external input, public endpoints, or Security/Keycloak configuration.
+Use for a new or changed authentication boundary, role/permission/ownership rule, admin behavior, sensitive data, upload, public endpoint, token handling, or Security/Keycloak configuration. Merely adding an endpoint under the existing authenticated `/api/v1/**` matcher does not trigger the full independent security gate.
 
 ## Current boundary
 
@@ -20,4 +20,4 @@ Use for authentication, roles/permissions, user-owned resources, admin behavior,
 
 Define an authorization matrix by actor/action/resource/state. Review endpoint and object-level checks, cross-user access, claim/role mapping, sensitive response fields, input/file handling, CORS/CSRF assumptions, secrets/configuration, token/PII logs, rate limiting where evidence requires it, and public health/docs exposure.
 
-Require negative tests for no token, malformed/expired/wrong issuer/wrong audience as applicable, insufficient role, another user's object, guessed IDs, private fields, and forbidden state transitions. Use Spring Security test JWT only after separately validating production decoder configuration. `security_authorization_reviewer` must independently return `SECURITY_PASS`; otherwise release is blocked.
+Select negative tests that the change can affect: no token, malformed/expired/wrong issuer/wrong audience, insufficient role, another user's object, guessed IDs, private fields, and forbidden state transitions as applicable. Use Spring Security test JWT only after separately validating production decoder configuration. When the trigger above applies, `security_authorization_reviewer` must independently return `SECURITY_PASS`; ordinary reuse of the established JWT boundary may be covered by focused 401 behavior plus Spring code review.

@@ -1,15 +1,15 @@
 ---
 name: business-idea-to-feature-spec
-description: Convert an informal or dictated OwlNest product idea into an explicit business specification and traceable acceptance criteria before technical design.
+description: Convert a materially ambiguous OwlNest product idea into an explicit business specification and traceable acceptance criteria before technical design.
 ---
 
 # Business Idea to Feature Specification
 
-Use when a request is conversational, incomplete, lacks actors/permissions/rules, or has no approved feature contract. This is Gate A and the business half of Gate B; it must finish before Java, API, SQL, or Redis design.
+Use when a request materially lacks actors, permissions, state transitions, failure rules, or an approved feature contract. Conversational or dictated wording alone is not a trigger: when behavior is clear, the root records concise assumptions and acceptance criteria without spending an extra analyst pass.
 
 ## Business analysis
 
-Give `business_analyst` the preserved original idea plus current product context. Require:
+Give `business_analyst` one bounded pass with the preserved original idea, current product context, exact missing decisions, delivery target, and output cap. Require only applicable sections from:
 
 - original idea and business objective;
 - actors, roles, goals, preconditions, and postconditions;
@@ -29,6 +29,6 @@ Ask the user only when a missing choice materially changes product behavior and 
 
 ## Requirements handoff
 
-After root approves coherence, give the complete business output to `requirements_acceptance_analyst`. Require `MASTER_REQUEST`, numbered `AC-001` criteria, positive and negative cases, authorization/ownership, validation, errors, data consistency, concurrency/idempotency, pagination/filter/sort, compatibility, regression scope, and a verification method for each criterion.
+Use `requirements_acceptance_analyst` only when several rules or edge cases need independent traceability and that work materially reduces ambiguity. Require `MASTER_REQUEST`, numbered `AC-001` criteria, only applicable positive/negative/risk cases, regression scope, and a verification method for each criterion.
 
 Every `BR-*` must map to at least one `AC-*`; no criterion may silently weaken a business rule. Technical specialists receive the business spec, acceptance criteria, assumptions, non-goals, and unresolved questions together.

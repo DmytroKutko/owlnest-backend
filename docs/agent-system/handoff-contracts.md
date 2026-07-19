@@ -1,6 +1,53 @@
 # Handoff Contracts
 
-Use stable IDs and Markdown/YAML-like sections. Omit no required field; use `NOT_APPLICABLE` with a reason. Every handoff includes `MASTER_REQUEST`, scope, evidence paths, assumptions, unresolved questions, non-goals, authoring role, timestamp, and status.
+Use the smallest applicable template; do not reproduce unrelated domain sections. Stable IDs are required for business rules, acceptance criteria, and actionable findings, not for routine narration. Within the selected template, use `NOT_APPLICABLE` only where omission could hide risk.
+
+The root creates one task brief and updates its evidence index instead of copying the complete request and assumptions into every agent message:
+
+```text
+TASK_BRIEF_ID:
+MASTER_REQUEST:
+DELIVERY_TIER: FAST | STANDARD | EXCEPTIONAL
+ACTIVE_TIME_TARGET_AND_CHECKPOINT:
+EXPECTED_SUBAGENT_PASS_RANGE:
+AFFECTED_SURFACES_AND_ACCEPTANCE_CRITERIA:
+ASSUMPTIONS:
+UNRESOLVED_QUESTIONS:
+NON_GOALS:
+EVIDENCE_INDEX:
+```
+
+Every assignment and return uses this small envelope and references the task brief:
+
+```text
+TASK_BRIEF_REF:
+PASSES_USED_AND_EXPECTED_RANGE:
+THIS_PASS_OUTCOME_AND_TARGET:
+SCOPE_OR_OWNED_FILES:
+EVIDENCE_REFS:
+NEW_ASSUMPTIONS_OR_QUESTIONS: only if any
+NEW_FINDINGS_OR_BLOCKERS: only if any
+STATUS: COMPLETE | PARTIAL | CHANGES_REQUIRED | BLOCKED
+```
+
+A subagent turn is one pass. Follow-ups and re-reviews increment the used count; interrupted, timed-out, partial, and blocked turns also count. The root sends existing evidence instead of asking each role to rediscover it.
+
+At a time or pass checkpoint, append:
+
+```text
+ELAPSED_ACTIVE_MINUTES:
+COMPLETED_WORK:
+COMMANDS_AND_OBSERVED_RESULTS:
+OPEN_BLOCKING_FINDINGS:
+ADVISORY_IMPROVEMENTS:
+UNVERIFIED_ACCEPTANCE_CRITERIA:
+RESIDUAL_RISKS:
+SMALLEST_NEXT_STEP:
+CONTINUATION_REASON: BLOCKING_FIX | SCOPE_EXPANSION | STOPPED
+USER_DECISION_REQUIRED: YES only for scope expansion, materially different solution, or unresolved blocking work after two targeted correction cycles; otherwise NO
+```
+
+The checkpoint returns control and stops optional refinement. It does not interrupt a necessary first or second targeted blocking-finding correction, and it never creates another iteration when the implementation is already complete.
 
 ## 1. Informal feature idea
 
@@ -262,6 +309,7 @@ GAPS_AND_REASON:
 ```text
 IDENTIFIER: <ROLE>-F###
 SEVERITY: CRITICAL | HIGH | MEDIUM | LOW
+BLOCKING: YES | NO
 AFFECTED_ACCEPTANCE_CRITERIA: [AC-###]
 AFFECTED_BUSINESS_RULES: [BR-###]
 DESCRIPTION:
@@ -270,6 +318,8 @@ LOCATION: file + class/method/line, SQL object, Redis key, endpoint, or config
 REPRODUCTION_STEPS: or NOT_APPLICABLE + reason
 REQUIRED_CORRECTION:
 REQUIRED_REGRESSION_TEST:
+DISPOSITION: FIX_NOW | ADVISORY_FOLLOW_UP | ACCEPT_AS_IS
+REVALIDATION_REQUIRED: NONE | TARGETED + exact evidence
 INTRODUCED_OR_PRE_EXISTING:
 STATUS: OPEN | FIXED | ACCEPTED_RISK | BLOCKED
 ```

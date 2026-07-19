@@ -32,4 +32,4 @@ Use for new feature modules, cross-module changes, package moves, controller/ser
 7. Compare skeleton/implementation with the implemented `identity/profile/presence/post` slices, including append-only post comments, not Draft `feed` or future comment mutation/moderation plans.
 8. Run `python3 scripts/validate-agent-system.py` for deterministic unambiguous checks.
 
-Return the common finding contract and the required architecture verdict. A skeleton must pass before substantial implementation continues.
+Return the common finding contract and the required architecture verdict. Mark a finding blocking only when a required boundary is actually violated; optional cleanup is advisory and must not request another review. A skeleton must pass before a major new module or restructuring continues; a known-pattern endpoint inside an existing module may use the same checklist within `spring_code_reviewer` instead of spending a separate pass.
