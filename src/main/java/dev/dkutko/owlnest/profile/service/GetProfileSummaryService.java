@@ -51,7 +51,8 @@ public class GetProfileSummaryService {
                 summary.accountId(),
                 summary.nickname(),
                 summary.displayName(),
-                null
+                null,
+                summary.onboardingCompleted() ? summary.avatarMediaId() : null
         );
     }
 }

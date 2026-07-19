@@ -37,6 +37,10 @@
     {
       "key": "globalPostCursorQuery",
       "value": ""
+    },
+    {
+      "key": "mediaId",
+      "value": ""
     }
   ],
   "event": [
@@ -54,8 +58,14 @@
           "  'Refresh Access Token': ['keycloakUrl', 'realm', 'clientId', 'refreshToken'],",
           "  'Complete or Replace Current Profile': ['baseUrl', 'accessToken'],",
           "  'Get Current Profile': ['baseUrl', 'accessToken'],",
+          "  'Set Current Avatar': ['baseUrl', 'accessToken', 'mediaId'],",
+          "  'Remove Current Avatar': ['baseUrl', 'accessToken'],",
           "  'Heartbeat': ['baseUrl', 'accessToken'],",
           "  'Get Public Profile': ['baseUrl', 'accessToken', 'accountId'],",
+          "  'Create Avatar Upload': ['baseUrl', 'accessToken'],",
+          "  'Confirm Upload': ['baseUrl', 'accessToken', 'mediaId'],",
+          "  'Create Avatar Delivery': ['baseUrl', 'accessToken', 'mediaId'],",
+          "  'Cancel Managed Media': ['baseUrl', 'accessToken', 'mediaId'],",
           "  'Create Post': ['baseUrl', 'accessToken'],",
           "  'List Global Posts': ['baseUrl', 'accessToken'],",
           "  'Get Post': ['baseUrl', 'accessToken', 'postId'],",
@@ -373,6 +383,131 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/profiles/{{accountId}}"
+          }
+        },
+        {
+          "name": "Set Current Avatar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mediaId\": \"{{mediaId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/profile/me/avatar",
+            "description": "Activates the owned READY avatar saved in mediaId. Run Create Avatar Upload, upload the exact selected file directly to the returned R2 capability, and Confirm Upload first."
+          }
+        },
+        {
+          "name": "Remove Current Avatar",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/profile/me/avatar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Media",
+      "description": "Private Cloudflare R2-backed avatar lifecycle. Presigned URLs are temporary secrets; do not log or persist them.",
+      "item": [
+        {
+          "name": "Create Avatar Upload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Avatar upload opportunity created', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('mediaId', body.mediaId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purpose\": \"AVATAR\",\n  \"contentType\": \"image/webp\",\n  \"sizeBytes\": 524288\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/media/uploads",
+            "description": "Replace contentType and sizeBytes with the exact selected file metadata. Upload the bytes directly to body.upload.url using all body.upload.requiredHeaders before confirmation. Postman saves only mediaId and deliberately does not persist the capability URL or headers."
+          }
+        },
+        {
+          "name": "Confirm Upload",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/media/{{mediaId}}/confirmation"
+          }
+        },
+        {
+          "name": "Create Avatar Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/media/{{mediaId}}/delivery",
+            "description": "Returns a short-lived bearer capability. Use it immediately and do not save it to collection or environment variables."
+          }
+        },
+        {
+          "name": "Cancel Managed Media",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/media/{{mediaId}}",
+            "description": "Cancels only owned pending or READY media. Active avatar media must first be removed or replaced through the Profile folder."
           }
         }
       ]

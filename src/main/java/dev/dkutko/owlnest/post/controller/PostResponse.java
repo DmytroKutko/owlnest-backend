@@ -1,6 +1,7 @@
 package dev.dkutko.owlnest.post.controller;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import dev.dkutko.owlnest.media.controller.MediaReferenceResponse;
 import dev.dkutko.owlnest.post.domain.PostMediaType;
 import dev.dkutko.owlnest.post.domain.PostType;
 import dev.dkutko.owlnest.post.service.PostCard;
@@ -39,7 +40,10 @@ public record PostResponse(
                         card.author().accountId(),
                         card.author().nickname(),
                         card.author().displayName(),
-                        card.author().avatarUrl()
+                        card.author().avatarUrl(),
+                        card.author().avatarMediaId() == null
+                                ? null
+                                : MediaReferenceResponse.from(card.author().avatarMediaId())
                 ),
                 card.postType(),
                 card.labels(),
@@ -72,7 +76,8 @@ public record PostResponse(
             String nickname,
             String displayName,
             @Schema(types = {"string", "null"})
-            String avatarUrl
+            String avatarUrl,
+            MediaReferenceResponse avatar
     ) {
     }
 

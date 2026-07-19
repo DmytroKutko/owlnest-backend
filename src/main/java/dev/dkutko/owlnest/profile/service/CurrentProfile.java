@@ -13,7 +13,23 @@ public record CurrentProfile(
         LocalDate birthDate,
         Gender gender,
         boolean onboardingCompleted,
+        UUID avatarMediaId,
         String email,
         boolean emailVerified
 ) {
+
+    public CurrentProfile withAvatarMediaId(UUID avatarMediaId) {
+        return new CurrentProfile(
+                accountId,
+                username,
+                displayName,
+                bio,
+                birthDate,
+                gender,
+                onboardingCompleted,
+                avatarMediaId,
+                email,
+                emailVerified
+        );
+    }
 }

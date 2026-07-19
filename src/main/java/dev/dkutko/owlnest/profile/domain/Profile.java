@@ -39,6 +39,9 @@ public class Profile {
     @Column(name = "onboarding_completed", nullable = false)
     private boolean onboardingCompleted;
 
+    @Column(name = "avatar_media_id")
+    private UUID avatarMediaId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -93,6 +96,20 @@ public class Profile {
 
     public boolean isOnboardingCompleted() {
         return onboardingCompleted;
+    }
+
+    public UUID getAvatarMediaId() {
+        return avatarMediaId;
+    }
+
+    public void setAvatarMediaId(UUID avatarMediaId, Instant now) {
+        this.avatarMediaId = Objects.requireNonNull(avatarMediaId, "avatarMediaId must not be null");
+        this.updatedAt = Objects.requireNonNull(now, "now must not be null");
+    }
+
+    public void clearAvatarMediaId(Instant now) {
+        avatarMediaId = null;
+        updatedAt = Objects.requireNonNull(now, "now must not be null");
     }
 
     public void completeOnboarding(

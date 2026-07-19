@@ -31,6 +31,7 @@ public class GetPublicProfileService {
                 profile.getUsername(),
                 profile.getDisplayName(),
                 profile.getBio(),
+                profile.getAvatarMediaId(),
                 presenceService.getStatus(accountId)
         );
     }

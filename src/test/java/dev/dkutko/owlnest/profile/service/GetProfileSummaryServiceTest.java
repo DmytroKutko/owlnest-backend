@@ -35,17 +35,22 @@ class GetProfileSummaryServiceTest {
         GetProfileSummaryService service = new GetProfileSummaryService(profileRepository);
         UUID firstAccountId = UUID.randomUUID();
         UUID secondAccountId = UUID.randomUUID();
+        UUID firstAvatarId = UUID.randomUUID();
         Set<UUID> accountIds = Set.of(firstAccountId, secondAccountId);
         when(profileRepository.findSummariesByAccountIds(accountIds)).thenReturn(List.of(
                 new ProfileRepository.ProfileSummaryData(
                         firstAccountId,
                         "first.safe",
-                        "First Safe Author"
+                        "First Safe Author",
+                        firstAvatarId,
+                        true
                 ),
                 new ProfileRepository.ProfileSummaryData(
                         secondAccountId,
                         "second.safe",
-                        "Second Safe Author"
+                        "Second Safe Author",
+                        UUID.randomUUID(),
+                        false
                 )
         ));
 
@@ -56,12 +61,14 @@ class GetProfileSummaryServiceTest {
                 firstAccountId,
                 "first.safe",
                 "First Safe Author",
-                null
+                null,
+                firstAvatarId
         ));
         assertThat(result.get(secondAccountId)).isEqualTo(new ProfileSummary(
                 secondAccountId,
                 "second.safe",
                 "Second Safe Author",
+                null,
                 null
         ));
         verify(profileRepository).findSummariesByAccountIds(accountIds);
@@ -81,7 +88,9 @@ class GetProfileSummaryServiceTest {
                 new ProfileRepository.ProfileSummaryData(
                         presentAccountId,
                         "present.safe",
-                        "Present Safe Author"
+                        "Present Safe Author",
+                        null,
+                        true
                 )
         ));
 
@@ -99,8 +108,8 @@ class GetProfileSummaryServiceTest {
         UUID accountId = UUID.randomUUID();
         Set<UUID> accountIds = Set.of(accountId);
         when(profileRepository.findSummariesByAccountIds(accountIds)).thenReturn(List.of(
-                new ProfileRepository.ProfileSummaryData(accountId, "first", "First"),
-                new ProfileRepository.ProfileSummaryData(accountId, "second", "Second")
+                new ProfileRepository.ProfileSummaryData(accountId, "first", "First", null, true),
+                new ProfileRepository.ProfileSummaryData(accountId, "second", "Second", null, true)
         ));
 
         assertThatThrownBy(() -> service.getByAccountIds(accountIds))

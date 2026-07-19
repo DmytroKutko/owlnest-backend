@@ -54,7 +54,7 @@ Create request містить тільки exact plain text:
 
 Текст required/nonblank, не містить `NUL` або unpaired UTF-16 surrogate і має максимум 5 000 Unicode code points. Backend не trim/normalize/перетворює валідний текст. `id`, `postId`, author і `createdAt` завжди server-owned. Будь-який authenticated account може коментувати active post; missing або soft-deleted post повертає `404 post.not_found`.
 
-Comment response містить `id`, `postId`, exact `text`, safe `author {accountId,nickname,displayName,avatarUrl}`, `createdAt` і `links {self,post,collection}`. Email, verification, birth date, gender, onboarding state та presence не експонуються.
+Comment response містить `id`, `postId`, exact `text`, safe `author {accountId,nickname,displayName,avatarUrl,avatar}`, `createdAt` і `links {self,post,collection}`. `avatar` дорівнює `null` або містить managed `mediaId` та authenticated root-relative `deliveryUrl`; legacy `avatarUrl` збережено для сумісності. Email, verification, birth date, gender, onboarding state та presence не експонуються.
 
 `GET /api/v1/posts/{id}/comments` приймає лише `limit` (default `20`, range `1..100`) та optional opaque `cursor`. Невідомі або повторені query parameters і malformed/post-mismatched cursor повертають `400 request.validation_failed`. Response має форму:
 
@@ -140,7 +140,7 @@ PUT є full replacement усіх author-editable полів. Omitted `postType`,
 }
 ```
 
-Backend повертає absolute `Instant`; elapsed-time formatting належить Flutter. Author projection навмисно виключає email, birth date, gender, onboarding state і presence. До explicit onboarding default author є privacy-neutral: generated `user_<id>` і `OwlNest user`; identity-provider name/email claims не стають публічними через post card. Поточна profile schema не має avatar, тому `avatarUrl` дорівнює `null`.
+Backend повертає absolute `Instant`; elapsed-time formatting належить Flutter. Author projection навмисно виключає email, birth date, gender, onboarding state і presence. До explicit onboarding default author є privacy-neutral: generated `user_<id>` і `OwlNest user`; identity-provider name/email claims не стають публічними через post card. `avatarUrl` залишається nullable legacy полем, а managed avatar представлено окремим `{mediaId, deliveryUrl}` без прямого R2 URL. Post module отримує лише UUID через safe profile projection і не залежить від media repository або storage adapter.
 
 ## Дані й узгодженість
 
@@ -176,4 +176,4 @@ Soft delete не видаляє content/interactions фізично, але вс
 - generated OpenAPI operation ID та відсутність неімплементованих list routes;
 - PostgreSQL schema/constraints і concurrent interaction transitions.
 
-Formatter/linter/coverage gate у repository не налаштовані; актуальний gate — IDE formatting, compilation, full `./gradlew test`, `./gradlew build`, `git diff --check` і незалежні architecture/code/data/security/QA reviews.
+Formatter/linter/coverage gate у repository не налаштовані. Верифікація підпорядковується tier/risk правилам у `docs/agent-system/workflow-routing.md`: focused post tests під час розробки, найширший виправданий suite/build один раз після фінальної правки, `git diff --check` та лише ті незалежні reviews, які активовані фактичним architecture/data/security/API ризиком.

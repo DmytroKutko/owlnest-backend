@@ -6,6 +6,7 @@ public record ProfileSummary(
         UUID accountId,
         String nickname,
         String displayName,
-        String avatarUrl
+        String avatarUrl,
+        UUID avatarMediaId
 ) {
 }

@@ -42,7 +42,7 @@ public class GetOrCreateCurrentProfileService {
         AuthenticatedIdentity identity = currentIdentityProvider.getCurrentIdentity();
         Account account = ensureAccountExistsService.ensureExists(identity);
         Instant now = Instant.now();
-        Profile profile = getOrCreateProfile(account, now);
+        Profile profile = getOrCreateProfileForUpdate(account, now);
 
         if (profileRepository.existsByUsernameIgnoreCaseAndAccountIdNot(command.username(), account.getId())) {
             throw new UsernameAlreadyInUseException(command.username());
@@ -71,6 +71,17 @@ public class GetOrCreateCurrentProfileService {
                 .orElseGet(() -> profileRepository.save(createDefaultProfile(account, now)));
     }
 
+    private Profile getOrCreateProfileForUpdate(Account account, Instant now) {
+        Profile existingProfile = profileRepository.findByAccountIdForUpdate(account.getId()).orElse(null);
+        if (existingProfile != null) {
+            return existingProfile;
+        }
+
+        profileRepository.lockProvisioningByAccountId(account.getId());
+        return profileRepository.findByAccountIdForUpdate(account.getId())
+                .orElseGet(() -> profileRepository.save(createDefaultProfile(account, now)));
+    }
+
     private CurrentProfile currentProfile(Account account, Profile profile) {
         return new CurrentProfile(
                 account.getId(),
@@ -80,6 +91,7 @@ public class GetOrCreateCurrentProfileService {
                 profile.getBirthDate(),
                 profile.getGender(),
                 profile.isOnboardingCompleted(),
+                profile.getAvatarMediaId(),
                 account.getEmail(),
                 account.isEmailVerified()
         );

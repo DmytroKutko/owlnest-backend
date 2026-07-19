@@ -1,5 +1,6 @@
 package dev.dkutko.owlnest.post.controller;
 
+import dev.dkutko.owlnest.media.controller.MediaReferenceResponse;
 import dev.dkutko.owlnest.post.service.PostCommentItem;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -28,7 +29,10 @@ public record PostCommentResponse(
                         item.author().accountId(),
                         item.author().nickname(),
                         item.author().displayName(),
-                        item.author().avatarUrl()
+                        item.author().avatarUrl(),
+                        item.author().avatarMediaId() == null
+                                ? null
+                                : MediaReferenceResponse.from(item.author().avatarMediaId())
                 ),
                 item.createdAt(),
                 new CommentLinks(self, post, collection)
@@ -40,7 +44,8 @@ public record PostCommentResponse(
             String nickname,
             String displayName,
             @Schema(types = {"string", "null"})
-            String avatarUrl
+            String avatarUrl,
+            MediaReferenceResponse avatar
     ) {
     }
 

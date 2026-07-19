@@ -2,6 +2,7 @@ package dev.dkutko.owlnest.profile.controller;
 
 import dev.dkutko.owlnest.presence.service.PresenceStatus;
 import dev.dkutko.owlnest.profile.service.PublicProfile;
+import dev.dkutko.owlnest.media.controller.MediaReferenceResponse;
 
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ public record PublicProfileResponse(
         String username,
         String displayName,
         String bio,
+        MediaReferenceResponse avatar,
         PresenceStatus presenceStatus
 ) {
 
@@ -19,6 +21,7 @@ public record PublicProfileResponse(
                 profile.username(),
                 profile.displayName(),
                 profile.bio(),
+                profile.avatarMediaId() == null ? null : MediaReferenceResponse.from(profile.avatarMediaId()),
                 profile.presenceStatus()
         );
     }

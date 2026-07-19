@@ -9,6 +9,7 @@ public record PublicProfile(
         String username,
         String displayName,
         String bio,
+        UUID avatarMediaId,
         PresenceStatus presenceStatus
 ) {
 }

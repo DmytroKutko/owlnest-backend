@@ -7,7 +7,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -216,6 +218,178 @@ class OpenApiDocumentationIntegrationTests {
                         .value(org.hamcrest.Matchers.hasItem(20)))
                 .andExpect(jsonPath("$.paths['/api/v1/posts/mine'].get").doesNotExist())
                 .andExpect(jsonPath("$.paths['/api/v1/posts/saved'].get").doesNotExist());
+    }
+
+    @Test
+    void documentsExactAuthenticatedManagedMediaUploadLifecycleContract() throws Exception {
+        mockMvc.perform(get("/v3/api-docs/rest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.operationId")
+                        .value("createMediaUpload"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.operationId")
+                        .value("confirmMediaUpload"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.operationId")
+                        .value("cancelManagedMedia"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.operationId")
+                        .value("replaceCurrentProfileAvatar"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].delete.operationId")
+                        .value("removeCurrentProfileAvatar"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.operationId")
+                        .value("deliverManagedMedia"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.security[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.security[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.security"
+                                + "[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.security"
+                                + "[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.security"
+                                + "[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].delete.security"
+                                + "[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.security"
+                                + "[?(@.keycloakOAuth2)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.security"
+                                + "[?(@.bearerAuth)]")
+                        .isNotEmpty())
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.requestBody.required").value(true))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.requestBody"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/MediaUploadRequest"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.requestBody")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.requestBody")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.requestBody.required")
+                        .value(true))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.requestBody"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/ProfileAvatarRequest"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].delete.requestBody")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.requestBody")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['201']"
+                                + ".headers.Location.schema.type")
+                        .value("string"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['201']"
+                                + ".headers.Location.schema.format")
+                        .value("uri-reference"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['201']"
+                                + ".headers.Cache-Control.schema.type")
+                        .value("string"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['201']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/MediaUploadResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['400']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['429']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/uploads'].post.responses['503']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.responses['200']"
+                                + ".headers.Cache-Control.schema.type")
+                        .value("string"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.responses['200']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/MediaConfirmationResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.responses['409']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/confirmation'].put.responses['503']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.responses['204'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}'].delete.responses['409']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.responses['200']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/ProfileResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.responses['400']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].put.responses['409']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].delete.responses['204'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/profile/me/avatar'].delete.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.responses['200']"
+                                + ".headers.Cache-Control.schema.type")
+                        .value("string"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.responses['200']"
+                                + ".content['application/json'].schema['$ref']")
+                        .value("#/components/schemas/MediaDeliveryResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.responses['400']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.responses['401'].content")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.responses['404']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/media/{mediaId}/delivery'].post.responses['503']"
+                                + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.components.schemas.ProfileAvatarRequest.required")
+                        .value(containsInAnyOrder("mediaId")))
+                .andExpect(jsonPath("$.components.schemas.ProfileAvatarRequest.properties.mediaId.format")
+                        .value("uuid"))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.required")
+                        .value(containsInAnyOrder("purpose", "contentType", "sizeBytes")))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.purpose.enum")
+                        .value(containsInAnyOrder("AVATAR")))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.contentType.minLength")
+                        .value(1))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.contentType.maxLength")
+                        .value(127))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadRequest.properties.sizeBytes.minimum")
+                        .value(1))
+                .andExpect(jsonPath("$.components.schemas.MediaUploadResponse.properties.upload['$ref']")
+                        .value("#/components/schemas/UploadAuthorization"))
+                .andExpect(jsonPath("$.components.schemas.UploadAuthorization.properties.method.enum")
+                        .value(containsInAnyOrder("PUT")))
+                .andExpect(jsonPath("$.components.schemas.UploadAuthorization.properties.url.format")
+                        .value("uri"))
+                .andExpect(jsonPath("$.components.schemas.UploadAuthorization.properties.requiredHeaders")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.UploadAuthorization.properties.requiredHeaders.description")
+                        .value(allOf(
+                                containsString("Content-Length"),
+                                containsString("sizeBytes"),
+                                containsString("Flutter Web")
+                        )))
+                .andExpect(jsonPath("$.components.schemas.MediaConfirmationResponse.properties.confirmedAt")
+                        .exists())
+                .andExpect(jsonPath("$.components.schemas.MediaDeliveryResponse.properties.url.format")
+                        .value("uri"))
+                .andExpect(jsonPath("$.components.schemas.MediaDeliveryResponse.properties.expiresAt")
+                        .exists());
     }
 
     @Test

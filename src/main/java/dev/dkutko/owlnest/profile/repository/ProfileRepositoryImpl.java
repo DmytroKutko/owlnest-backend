@@ -43,6 +43,11 @@ public class ProfileRepositoryImpl implements ProfileRepository {
     }
 
     @Override
+    public Optional<Profile> findByAccountIdForUpdate(UUID accountId) {
+        return repository.findByAccountIdForUpdate(accountId);
+    }
+
+    @Override
     public Optional<ProfileSummaryData> findSummaryByAccountId(UUID accountId) {
         return repository.findSummaryByAccountId(accountId)
                 .map(ProfileRepositoryImpl::toSummaryData);
@@ -72,7 +77,9 @@ public class ProfileRepositoryImpl implements ProfileRepository {
         return new ProfileSummaryData(
                 summary.getAccountId(),
                 summary.getNickname(),
-                summary.getDisplayName()
+                summary.getDisplayName(),
+                summary.getAvatarMediaId(),
+                summary.isOnboardingCompleted()
         );
     }
 

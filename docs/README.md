@@ -25,7 +25,7 @@ Restart the complete local stack after source or configuration changes:
 ./setup.sh
 ```
 
-The script validates `.env` and Docker, stops the existing project containers, rebuilds the backend image, starts PostgreSQL, Redis, Keycloak, and the backend, waits for readiness, and prints their status. Named database and Keycloak volumes are preserved.
+The script validates `.env` and Docker, stops the existing project containers, rebuilds the backend image, starts PostgreSQL, Redis, Keycloak, and the backend, waits for the backend Actuator readiness probe to report `UP`, and prints their status. Named database and Keycloak volumes are preserved.
 
 To start without forcing a complete restart:
 
@@ -39,7 +39,9 @@ Stop the stack without deleting database data:
 docker compose --profile full-stack down
 ```
 
-Docker Compose reads `.env`; Spring Boot then receives database and Redis connection details through its Docker Compose integration. Spring Boot does not automatically treat `.env` as an application configuration file. Application secrets must come from environment variables or an external secret manager, never committed `application*.yaml` files. PostgreSQL data is persisted in the named `postgres_data` volume. Redis presence is intentionally ephemeral and has no volume.
+Docker Compose reads `.env`; Spring Boot then receives database, Redis, and optional Cloudflare R2 settings as container environment variables. Spring Boot does not automatically treat `.env` as an application configuration file. R2 stays disabled when `R2_ENABLED` is absent or `false`; enabling it also requires the private bucket, account, endpoint, and scoped access-key values documented in `.env.example`. Compose validates the configuration without printing those values. Application secrets must come from environment variables or an external secret manager, never committed `application*.yaml` files. PostgreSQL data is persisted in the named `postgres_data` volume. Redis presence is intentionally ephemeral and has no volume.
+
+The backend container is considered ready only when `GET /actuator/health/readiness` returns an `UP` status. `./setup.sh` checks that endpoint through the loopback-published backend port after Compose has completed its own container health wait.
 
 Keycloak imports `docker/keycloak/owlnest-realm.json` only when the `owlnest` realm does not already exist. `./setup.sh` preserves `keycloak_data`, so changing the import file or bootstrap admin password does not overwrite existing Keycloak state. Apply deliberate Admin API changes or explicitly recreate the local volume when a clean realm import is required.
 
@@ -62,6 +64,7 @@ Swagger UI is available at `http://localhost:8080/swagger-ui.html`. Its top bar 
 - [Authentication Implementation Plan](features/authentication-implementation-plan.md) — implemented files, dependencies, annotations, stages, and alternatives.
 - [Profile Onboarding](features/profile-onboarding.md) — browser registration boundary and authenticated product-profile contract.
 - [Profile and Online Presence Implementation Plan](features/profile-presence-implementation-plan.md) — public-profile privacy boundary, Redis heartbeat contract, dependencies, annotations, and verification.
+- [Managed Media and Cloudflare R2](features/managed-media-r2.md) — private avatar upload, confirmation, attachment, delivery, cleanup, configuration, and live verification.
 - [Дописи: реалізований single-post зріз](features/posts-architecture-plan.md) — фактичний CRUD/card contract, ordered labels/media, likes, bookmarks, reposts, consistency rules і відкладена comments/feed межа.
 - [ADR-0001](decisions/0001-feature-first-modular-monolith.md) — accepted feature-first modular-monolith structure.
 - [ADR-0002](decisions/0002-use-keycloak-as-identity-provider.md) — accepted Keycloak identity-provider decision.

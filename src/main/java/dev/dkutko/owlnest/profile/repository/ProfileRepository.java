@@ -13,6 +13,8 @@ public interface ProfileRepository {
 
     Optional<Profile> findByAccountId(UUID accountId);
 
+    Optional<Profile> findByAccountIdForUpdate(UUID accountId);
+
     Optional<ProfileSummaryData> findSummaryByAccountId(UUID accountId);
 
     List<ProfileSummaryData> findSummariesByAccountIds(Set<UUID> accountIds);
@@ -24,7 +26,9 @@ public interface ProfileRepository {
     record ProfileSummaryData(
             UUID accountId,
             String nickname,
-            String displayName
+            String displayName,
+            UUID avatarMediaId,
+            boolean onboardingCompleted
     ) {
     }
 

@@ -69,11 +69,13 @@ Use direct service calls when one module needs an immediate result. Use in-proce
 
 Friendship and follow relationships remain separate: follow is directional; friendship requires request and acceptance and is symmetric after acceptance. External sharing is initially a Flutter/client responsibility unless server-side analytics becomes a requirement.
 
-## Media Storage Direction
+## Media Storage
 
-Managed media upload/storage remains outside the initial slices. The post feature can persist ordered, untrusted HTTPS image/video references without fetching them. When OwlNest-owned avatars and post media are introduced, use Cloudflare R2 as the planned object store. Store object keys, ownership, content type, size, dimensions, and lifecycle state in PostgreSQL; do not store image binaries in PostgreSQL or a backend container filesystem.
+The implemented first managed-media slice supports private profile avatars in Cloudflare R2. PostgreSQL stores ownership, immutable declared and observed metadata, lifecycle state, cleanup leases, and the profile association; object bytes remain in a private bucket. The backend issues short-lived authenticated capabilities but does not proxy upload or download bodies.
 
-The preferred upload flow is a short-lived presigned URL issued by the backend after authentication and validation, followed by a direct Flutter-to-R2 upload. Keep the R2 integration behind a media-owned storage port so the provider can be replaced without changing post or profile domain logic. Confirm current R2 quotas, pricing, image-processing needs, and deletion/privacy rules before implementation; no R2 dependency is required until this slice begins.
+The direct-upload flow is reservation, presigned create-only `PUT`, R2 metadata confirmation, atomic avatar activation, and authenticated creation of a short-lived private `GET` capability. R2 access stays behind the media-owned `MediaObjectStorage` port. Profile code calls a public media lifecycle service and never reaches into media repositories. R2 calls run outside PostgreSQL transactions; a bounded scheduled cleanup uses database leases and retry backoff. The implemented contract and configuration live in [Managed Media and Cloudflare R2](features/managed-media-r2.md).
+
+The post feature still persists ordered, untrusted HTTPS image/video references without fetching them. Managed post attachment, processing, and migration of URL-backed post media remain deferred.
 
 ## Delivery Roadmap
 

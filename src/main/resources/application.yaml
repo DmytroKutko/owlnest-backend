@@ -37,3 +37,25 @@ springdoc:
         - profile
         - email
       use-pkce-with-authorization-code-grant: true
+
+owlnest:
+  media:
+    cleanup:
+      fixed-delay: ${MEDIA_CLEANUP_FIXED_DELAY:1m}
+      initial-delay: ${MEDIA_CLEANUP_INITIAL_DELAY:30s}
+    r2:
+      enabled: ${R2_ENABLED:false}
+      account-id: ${R2_ACCOUNT_ID:}
+      endpoint: ${R2_ENDPOINT:https://disabled.invalid}
+      region: ${R2_REGION:auto}
+      bucket-name: ${R2_BUCKET_NAME:}
+      access-key-id: ${R2_ACCESS_KEY_ID:}
+      secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+      upload-url-ttl: ${R2_UPLOAD_URL_TTL:15m}
+      read-url-ttl: ${R2_READ_URL_TTL:5m}
+      connection-acquisition-timeout: ${R2_CONNECTION_ACQUISITION_TIMEOUT:1s}
+      connect-timeout: ${R2_CONNECT_TIMEOUT:2s}
+      read-timeout: ${R2_READ_TIMEOUT:3s}
+      api-call-attempt-timeout: ${R2_API_CALL_ATTEMPT_TIMEOUT:4s}
+      api-call-timeout: ${R2_API_CALL_TIMEOUT:12s}
+      max-attempts: ${R2_MAX_ATTEMPTS:3}
